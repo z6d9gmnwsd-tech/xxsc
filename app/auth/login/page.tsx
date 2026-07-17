@@ -53,8 +53,7 @@ export default function LoginPage() {
       localStorage.setItem('phone', phone)
       setSuccess('登录成功！')
       setTimeout(() => {
-        router.push('/my')
-        router.refresh()
+        window.location.href = '/'
       }, 1000)
     } else {
       setError(data?.message || '登录失败')
@@ -91,7 +90,6 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    // 检查手机号是否已注册
     const { data: existingUser } = await supabase
       .from('profiles')
       .select('id')
@@ -124,8 +122,7 @@ export default function LoginPage() {
       localStorage.setItem('phone', phone)
       setSuccess('注册成功！您的用户名是：' + data.nickname)
       setTimeout(() => {
-        router.push('/my')
-        router.refresh()
+        window.location.href = '/'
       }, 2000)
     } else {
       setError(data?.message || '注册失败')
@@ -141,7 +138,6 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    // 先获取用户的密保问题
     const { data: userData } = await supabase
       .from('profiles')
       .select('security_question')
@@ -221,7 +217,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen" style={{background: '#FBF8F3'}}>
-      {/* 头部 */}
       <div className="px-4 py-8 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
         <div className="text-center">
           <div className="text-5xl mb-4">📚</div>
@@ -231,7 +226,6 @@ export default function LoginPage() {
       </div>
 
       <div className="p-4">
-        {/* 登录/注册表单 */}
         {!showForgotPassword ? (
           <div className="rounded-2xl p-6" style={{background: '#fff'}}>
             <h2 className="text-xl font-bold text-center mb-6" style={{color: '#333'}}>
