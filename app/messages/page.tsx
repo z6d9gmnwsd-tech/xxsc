@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import { useRouter } from 'next/navigation'
+import { getTimeAgo } from '@/lib/utils'
 import BottomNav from '@/components/BottomNav'
 import EmptyState from '@/components/EmptyState'
 import LoadingSpinner from '@/components/LoadingSpinner'
@@ -12,6 +13,7 @@ import BackButton from '@/components/BackButton'
 interface Conversation {
   otherUserId: string
   otherNickname: string
+  otherAvatar: string | null
   lastMessage: string
   lastTime: string
   unread: number
@@ -24,8 +26,12 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!userLoading && user) fetchConversations()
-    if (!userLoading && !user) setLoading(false)
+    if (!userLoading && user) {
+      fetchConversations()
+    }
+    if (!userLoading && !user) {
+      setLoading(false)
+    }
   }, [user, userLoading])
 
   const fetchConversations = async () => {
@@ -50,6 +56,7 @@ export default function MessagesPage() {
         convMap.set(otherId, {
           otherUserId: otherId,
           otherNickname: '',
+          otherAvatar: null,
           lastMessage: msg.content,
           lastTime: msg.created_at,
           unread: msg.receiver_id === user.id && !msg.is_read ? 1 : 0,
@@ -65,13 +72,16 @@ export default function MessagesPage() {
       const ids = convArray.map(c => c.otherUserId)
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, nickname')
+        .select('id, nickname, avatar_url')
         .in('id', ids)
 
       if (profiles) {
         for (const conv of convArray) {
           const p = profiles.find(p => p.id === conv.otherUserId)
-          if (p) conv.otherNickname = p.nickname || '匿名用户'
+          if (p) {
+            conv.otherNickname = p.nickname || '匿名用户'
+            conv.otherAvatar = p.avatar_url
+          }
         }
       }
     }
@@ -80,7 +90,7 @@ export default function MessagesPage() {
     setLoading(false)
   }
 
-  const getTimeAgo = (dateStr: string) => {
+  const getTimeAgoLocal = (dateStr: string) => {
     const now = new Date()
     const date = new Date(dateStr)
     const diff = now.getTime() - date.getTime()
@@ -98,21 +108,21 @@ export default function MessagesPage() {
   if (!user) {
     return (
       <div className="pb-20">
-        <div className="bg-gradient-primary px-4 py-6 text-white">
+        <div className="px-4 py-6 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
           <div className="flex items-center gap-3">
             <BackButton />
             <h1 className="text-xl font-bold">消息</h1>
           </div>
         </div>
-        <EmptyState icon="💬" title="暂无消息" description="登录后查看消息" action={{ label: "登录 / 注册", href: "/auth/login" }} />
-<BottomNav activePage="my" />
+        <EmptyState icon="💬" title="暂无消息" description="登录后查看消息" action={{ label: "登录 / 注册", href: "/my" }} />
+        <BottomNav activePage="my" />
       </div>
     )
   }
 
   return (
     <div className="pb-20">
-      <div className="bg-gradient-primary px-4 py-6 text-white">
+      <div className="px-4 py-6 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
         <div className="flex items-center gap-3">
           <BackButton />
           <h1 className="text-xl font-bold">消息</h1>
@@ -127,20 +137,25 @@ export default function MessagesPage() {
             <a
               key={conv.otherUserId}
               href={`/chat?id=${conv.otherUserId}`}
-              className="card p-4 mb-3 animate-fade-in flex items-center gap-3 block"
+              className="card flex items-center gap-3 mb-3 animate-fade-in block"
+              style={{margin: '16px 0', padding: '28rpx'}}
             >
-              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">👤</span>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{background: '#e0e0e0'}}>
+                {conv.otherAvatar ? (
+                  <img src={conv.otherAvatar} alt="" className="w-full h-full object-cover rounded-full" />
+                ) : (
+                  <span className="text-xl">👤</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-900">{conv.otherNickname}</span>
-                  <span className="text-xs text-gray-400">{getTimeAgo(conv.lastTime)}</span>
+                  <span className="font-medium" style={{color: '#333'}}>{conv.otherNickname}</span>
+                  <span className="text-xs" style={{color: '#999'}}>{getTimeAgoLocal(conv.lastTime)}</span>
                 </div>
-                <p className="text-sm text-gray-500 truncate mt-1">{conv.lastMessage}</p>
+                <p className="text-sm mt-1 truncate" style={{color: '#666'}}>{conv.lastMessage}</p>
               </div>
               {conv.unread > 0 && (
-                <div className="w-5 h-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center flex-shrink-0">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{background: '#ffa06f', color: '#fff', fontSize: '10px'}}>
                   {conv.unread}
                 </div>
               )}
