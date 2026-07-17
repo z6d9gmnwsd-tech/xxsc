@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import BackButton from '@/components/BackButton'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 function ReportContent() {
   const searchParams = useSearchParams()
