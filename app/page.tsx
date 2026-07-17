@@ -23,7 +23,6 @@ export default function HomePage() {
       }
       return
     }
-    // 执行操作
     if (action === 'publish') {
       window.location.href = '/publish'
     } else if (action === 'want') {
@@ -33,21 +32,19 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* 头部 */}
-      <div className="bg-gradient-primary px-4 py-6 text-white">
+      <div className="px-4 py-6 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background: 'rgba(255,255,255,0.2)'}}>
             <span className="text-2xl">📚</span>
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold tracking-wide">新校书仓</h1>
-            <p className="text-sm opacity-80">校园二手教材交易平台</p>
+            <p className="text-sm" style={{opacity: 0.8}}>校园二手教材交易平台</p>
           </div>
         </div>
       </div>
 
-      {/* 搜索栏 */}
-      <div className="px-4 py-3 bg-white">
+      <div className="px-4 py-3" style={{background: '#fff'}}>
         <div className="flex gap-2">
           <input
             className="input flex-1"
@@ -60,7 +57,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 快捷入口 */}
       <div className="flex gap-3 px-4 py-3">
         <div onClick={() => handleAction('want')} className="flex-1 flex items-center gap-3 p-4 rounded-2xl cursor-pointer" style={{background: 'linear-gradient(135deg, #FBF8F3, #F5E6D0)', border: '1px solid #E0C9A8'}}>
           <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style={{background: 'linear-gradient(135deg, #F5E6D0, #E0C9A8)'}}>
@@ -82,7 +78,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 筛选栏 */}
       <div className="flex items-center gap-2 px-4 py-3 mb-2" style={{background: '#fff'}}>
         <button
           onClick={() => setShowFilter(!showFilter)}
@@ -128,7 +123,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* 分类筛选 */}
       {showFilter && (
         <div className="px-4 py-3 border-b" style={{background: '#fff', borderColor: '#f0f0f0'}}>
           <div className="text-xs mb-2" style={{color: '#999'}}>选择分类</div>
@@ -162,7 +156,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 商品列表 */}
       <div className="pb-20">
         <BookList searchQuery={searchQuery} sortBy={sortBy} filterCategory={filterCategory} />
       </div>
