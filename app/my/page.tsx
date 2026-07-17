@@ -4,12 +4,19 @@ import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/BottomNav'
 import AuthModal from '@/components/AuthModal'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function MyPage() {
   const { user, loading, logout } = usePhoneAuth()
   const router = useRouter()
   const [showAuthModal, setShowAuthModal] = useState(false)
+
+  // 登录成功后自动刷新页面
+  useEffect(() => {
+    if (user) {
+      router.refresh()
+    }
+  }, [user])
 
   const handleLogout = () => {
     if (confirm('确定要退出登录吗？')) {
