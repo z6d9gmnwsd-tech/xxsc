@@ -4,12 +4,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import { useRouter } from 'next/navigation'
-import { getTimeAgo, getConditionColor, getCategoryTag } from '@/lib/utils'
+import { getTimeAgo } from '@/lib/utils'
 import BottomNav from '@/components/BottomNav'
 import EmptyState from '@/components/EmptyState'
 import LoadingSpinner from '@/components/LoadingSpinner'
-import BackButton from '@/components/BackButton'
-import AuthModal from '@/components/AuthModal'
 
 interface FavoriteItem {
   id: string
@@ -74,28 +72,29 @@ export default function MyFavoritesPage() {
       ) : (
         <div className="px-4 py-2">
           {favorites.map((fav) => (
-            <a key={fav.id} href={`/detail?id=${fav.book_id}`} className="card flex overflow-hidden mb-3 animate-fade-in block">
+            <a key={fav.id} href={`/detail?id=${fav.book_id}`} className="card flex overflow-hidden mb-3 animate-fade-in block" style={{margin: '16px 0', padding: '28rpx'}}>
               <div className="relative flex-shrink-0">
                 {fav.books.image_url ? (
-                  <img src={fav.books.image_url} alt={fav.books.title} className="w-[100px] h-[100px] object-cover" />
+                  <img src={fav.books.image_url} alt={fav.books.title} className="w-[100px] h-[100px] object-cover rounded-xl" />
                 ) : (
-                  <div className="w-[100px] h-[100px] bg-gray-100 flex items-center justify-center">
+                  <div className="w-[100px] h-[100px] flex items-center justify-center rounded-xl" style={{background: '#f0f0f0'}}>
                     <span className="text-4xl">📚</span>
                   </div>
                 )}
               </div>
               <div className="flex-1 p-3 flex flex-col justify-between">
                 <div>
-                  <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">{fav.books.title}</h3>
+                  <h3 className="font-semibold text-sm line-clamp-2" style={{color: '#333'}}>{fav.books.title}</h3>
                   <div className="flex gap-1 mt-1">
-                    <span className={`tag text-xs ${getCategoryTag(fav.books.category)}`}>{fav.books.category}</span>
+                    <span className="tag tag-primary text-xs">{fav.books.category}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-end">
-                  <span className="text-lg font-bold text-orange-500">¥{fav.books.price}</span>
+                  <span className="text-lg font-bold" style={{color: '#ffa06f'}}>¥{fav.books.price}</span>
                   <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeFavorite(fav.id) }}
-                    className="text-xs text-red-400 px-2 py-1"
+                    className="text-xs px-2 py-1"
+                    style={{color: '#ee0a24'}}
                   >
                     取消收藏
                   </button>
@@ -106,7 +105,7 @@ export default function MyFavoritesPage() {
         </div>
       )}
 
-      <BottomNav activePage="my" />
+      <BottomNav activePage="favorites" />
     </div>
   )
 }
