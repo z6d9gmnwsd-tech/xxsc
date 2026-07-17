@@ -49,9 +49,9 @@ function ReportContent() {
     return (
       <div className="flex flex-col items-center justify-center p-8 py-20">
         <span className="text-6xl mb-4">⚠️</span>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">举报功能</h2>
-        <p className="text-gray-500 mb-6 text-center">请先登录后再举报</p>
-        <a href="/auth/login" className="btn-primary">登录 / 注册</a>
+        <h2 className="text-xl font-semibold mb-2" style={{color: '#333'}}>举报功能</h2>
+        <p className="mb-6 text-center" style={{color: '#666'}}>请先登录后再举报</p>
+        <a href="/my" className="btn-primary">登录 / 注册</a>
       </div>
     )
   }
@@ -59,33 +59,33 @@ function ReportContent() {
   return (
     <div className="p-4 pb-20">
       {success && (
-        <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-xl text-center">
+        <div className="mb-4 p-3 rounded-xl text-center text-sm" style={{background: '#e8f8f0', color: '#27ae60'}}>
           {success}
         </div>
       )}
 
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">选择举报原因</h2>
+        <h2 className="text-lg font-semibold mb-4" style={{color: '#333'}}>选择举报原因</h2>
         <div className="space-y-3">
           {reasons.map((reason) => (
             <button
               key={reason.value}
               onClick={() => setSelectedReason(reason.value)}
-              className={`w-full p-4 rounded-xl text-left border transition-all ${
-                selectedReason === reason.value
-                  ? 'border-orange-500 bg-orange-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+              className="w-full p-4 rounded-xl text-left border transition-all"
+              style={{
+                background: selectedReason === reason.value ? '#FFF3E0' : '#fff',
+                borderColor: selectedReason === reason.value ? '#ffa06f' : '#e0e0e0'
+              }}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  selectedReason === reason.value ? 'border-orange-500' : 'border-gray-300'
-                }`}>
+                <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{
+                  borderColor: selectedReason === reason.value ? '#ffa06f' : '#e0e0e0'
+                }}>
                   {selectedReason === reason.value && (
-                    <div className="w-3 h-3 rounded-full bg-orange-500" />
+                    <div className="w-3 h-3 rounded-full" style={{background: '#ffa06f'}} />
                   )}
                 </div>
-                <span className="text-gray-700">{reason.label}</span>
+                <span style={{color: '#333'}}>{reason.label}</span>
               </div>
             </button>
           ))}
@@ -93,7 +93,7 @@ function ReportContent() {
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm text-gray-600 mb-2">补充说明（选填）</label>
+        <label className="block text-sm mb-2" style={{color: '#666'}}>补充说明（选填）</label>
         <textarea
           className="input min-h-[100px]"
           placeholder="请详细描述问题..."
@@ -116,13 +116,13 @@ function ReportContent() {
 export default function ReportPage() {
   return (
     <div>
-      <div className="bg-gradient-primary px-4 py-6 text-white">
+      <div className="px-4 py-6 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
         <div className="flex items-center gap-3">
           <BackButton />
           <h1 className="text-xl font-bold">举报</h1>
         </div>
       </div>
-      <Suspense fallback={<div className="p-4 text-center text-gray-500">加载中...</div>}>
+      <Suspense fallback={<LoadingSpinner />}>
         <ReportContent />
       </Suspense>
     </div>
