@@ -18,6 +18,7 @@ interface BookDetail {
   grade: string
   subject: string
   image_url: string | null
+  images: string[] | null
   isbn: string | null
   author: string | null
   publisher: string | null
@@ -34,6 +35,8 @@ function EditItemContent() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   const [title, setTitle] = useState('')
   const [isbn, setIsbn] = useState('')
@@ -45,7 +48,7 @@ function EditItemContent() {
   const [category, setCategory] = useState('教材')
   const [grade, setGrade] = useState('')
   const [subject, setSubject] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  const [images, setImages] = useState<string[]>([])
   const [description, setDescription] = useState('')
 
   const conditions = ['全新', '九成新', '八成新', '七成新及以下']
@@ -90,7 +93,9 @@ function EditItemContent() {
         setCategory(data.category || '教材')
         setGrade(data.grade || '')
         setSubject(data.subject || '')
-        setImageUrl(data.image_url || '')
+        // 处理多张图片
+        const imageList = data.images || (data.image_url ? [data.image_url] : [])
+        setImages(imageList)
         setDescription(data.description || '')
       }
     } catch (err) {
@@ -101,26 +106,56 @@ function EditItemContent() {
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
+    const files = e.target.files
+    if (!files || files.length === 0 || !user) return
 
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`
+    const remainingSlots = 5 - images.length
+    const filesToUpload = Array.from(files).slice(0, remainingSlots)
 
-    const { data, error } = await supabase.storage
-      .from('book-images')
-      .upload(fileName, file)
-
-    if (error) {
-      console.error('Upload error:', error)
+    if (filesToUpload.length === 0) {
+      setError('最多只能上传5张图片')
       return
     }
 
-    if (data) {
-      const { data: urlData } = supabase.storage.from('book-images').getPublicUrl(fileName)
-      if (urlData) {
-        setImageUrl(urlData.publicUrl)
+    setUploading(true)
+    const newImages: string[] = []
+
+    for (const file of filesToUpload) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('图片大小不能超过5MB')
+        setUploading(false)
+        return
       }
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('book-images')
+        .upload(fileName, file)
+
+      if (uploadError) {
+        setError('图片上传失败：' + uploadError.message)
+        setUploading(false)
+        return
+      }
+
+      if (data) {
+        const { data: urlData } = supabase.storage.from('book-images').getPublicUrl(fileName)
+        if (urlData) {
+          newImages.push(urlData.publicUrl)
+        }
+      }
+    }
+
+    setImages([...images, ...newImages])
+    setUploading(false)
+  }
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index))
+    if (currentImageIndex >= images.length - 1) {
+      setCurrentImageIndex(Math.max(0, images.length - 2))
     }
   }
 
@@ -148,7 +183,8 @@ function EditItemContent() {
       category,
       grade: grade || null,
       subject: subject || null,
-      image_url: imageUrl || null,
+      images: images,
+      image_url: images[0] || null,
       description: description || null,
       updated_at: new Date().toISOString()
     }).eq('id', id)
@@ -200,35 +236,85 @@ function EditItemContent() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 商品图片 */}
+          {/* 商品图片 - 轮播显示 */}
           <div className="rounded-2xl p-4" style={{background: '#fff'}}>
-            <h3 className="font-bold mb-3" style={{color: '#333'}}>商品图片</h3>
-            <div className="flex gap-3 items-start">
-              {imageUrl ? (
-                <div className="relative">
-                  <img src={imageUrl} alt="" className="w-24 h-24 rounded-xl object-cover" />
+            <h3 className="font-bold mb-3" style={{color: '#333'}}>商品图片（{images.length}/5）</h3>
+            
+            {images.length > 0 ? (
+              <div>
+                {/* 轮播区域 */}
+                <div className="relative mb-3">
+                  <div className="w-full h-64 rounded-xl overflow-hidden" style={{background: '#f5f5f5'}}>
+                    <img 
+                      src={images[currentImageIndex]} 
+                      alt="" 
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  {/* 删除按钮 */}
                   <button
                     type="button"
-                    onClick={() => setImageUrl('')}
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-xs flex items-center justify-center"
-                    style={{background: '#ee0a24', color: '#fff'}}
+                    onClick={() => removeImage(currentImageIndex)}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{background: 'rgba(0,0,0,0.5)', color: '#fff'}}
                   >
                     ✕
                   </button>
+                  {/* 图片计数 */}
+                  <div className="absolute bottom-2 right-2 px-3 py-1 rounded-full text-xs" style={{background: 'rgba(0,0,0,0.5)', color: '#fff'}}>
+                    {currentImageIndex + 1}/{images.length}
+                  </div>
                 </div>
-              ) : (
-                <label className="w-24 h-24 rounded-xl flex flex-col items-center justify-center cursor-pointer" style={{border: '2px dashed #E0D5C8'}}>
-                  <span className="text-2xl" style={{color: '#999'}}>📷</span>
-                  <span className="text-xs mt-1" style={{color: '#999'}}>上传图片</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageUpload}
-                  />
-                </label>
-              )}
-            </div>
+
+                {/* 缩略图列表 */}
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {images.map((img, index) => (
+                    <div 
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className="relative flex-shrink-0 cursor-pointer"
+                      style={{
+                        border: index === currentImageIndex ? '3px solid #ffa06f' : '3px solid transparent',
+                        borderRadius: '8px'
+                      }}
+                    >
+                      <img src={img} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                      {index === currentImageIndex && (
+                        <div className="absolute inset-0 border-2 rounded-lg" style={{borderColor: '#ffa06f'}} />
+                      )}
+                    </div>
+                  ))}
+                  {/* 添加图片按钮 */}
+                  {images.length < 5 && (
+                    <label className="flex-shrink-0 w-16 h-16 rounded-lg flex flex-col items-center justify-center cursor-pointer" style={{border: '2px dashed #E0D5C8'}}>
+                      <span className="text-xl" style={{color: '#999'}}>+</span>
+                      <span className="text-xs" style={{color: '#999'}}>添加</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={uploading}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <label className="w-full h-48 rounded-xl flex flex-col items-center justify-center cursor-pointer" style={{border: '2px dashed #E0D5C8'}}>
+                <span className="text-4xl" style={{color: '#999'}}>{uploading ? '⏳' : '📷'}</span>
+                <span className="text-sm mt-2" style={{color: '#999'}}>{uploading ? '上传中...' : '点击上传图片（最多5张）'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                />
+              </label>
+            )}
           </div>
 
           {/* 基本信息 */}
