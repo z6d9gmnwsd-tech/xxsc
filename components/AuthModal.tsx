@@ -104,10 +104,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       return
     }
 
-    if (!/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(password)) {
-      setError('密码只能包含字母、数字和常见标点符号')
-      return
-    }
+    setLoading(true)
+    setError('')
 
     const question1 = customQuestion1 || securityQuestion1
     const question2 = customQuestion2 || securityQuestion2
@@ -115,9 +113,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       setError('请选择或输入两个密保问题')
       return
     }
-
-    setLoading(true)
-    setError('')
 
     const { data, error: funcError } = await supabase.rpc('register_user', {
       p_phone: phone,
@@ -150,7 +145,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   }
 
   const handleVerifyAnswer = async () => {
-    if (!phone || !securityAnswer) {
+    if (!phone || !securityAnswer1) {
       setError('请输入手机号和密保答案')
       return
     }
@@ -158,8 +153,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setLoading(true)
     setError('')
 
-    // 尝试验证第一个密保答案
-    const { data: data1, error: error1 } = await supabase.rpc('verify_security_answer', {
+    const { data: data1 } = await supabase.rpc('verify_security_answer', {
       p_phone: phone,
       p_answer: securityAnswer1
     })
@@ -170,9 +164,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       return
     }
 
-    // 如果第一个失败，尝试验证第二个密保答案
     if (securityAnswer2) {
-      const { data: data2, error: error2 } = await supabase.rpc('verify_security_answer', {
+      const { data: data2 } = await supabase.rpc('verify_security_answer', {
         p_phone: phone,
         p_answer: securityAnswer2
       })
@@ -198,11 +191,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
     if (password !== confirmPassword) {
       setError('两次输入的密码不一致')
-      return
-    }
-
-    if (!/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(password)) {
-      setError('密码只能包含字母、数字和常见标点符号')
       return
     }
 
@@ -237,8 +225,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden">
-        {/* 头部 */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-400 px-6 py-4 text-white">
+        <div className="px-6 py-4 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-bold">
               {step === 'login' && '登录'}
@@ -251,160 +238,79 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           </div>
         </div>
 
-        {/* 内容 */}
         <div className="p-6">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-500 text-sm rounded-xl text-center">
+            <div className="mb-4 p-3 rounded-xl text-center text-sm" style={{background: '#FFF0F0', color: '#ee0a24'}}>
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-xl text-center">
+            <div className="mb-4 p-3 rounded-xl text-center text-sm" style={{background: '#e8f8f0', color: '#27ae60'}}>
               {success}
             </div>
           )}
 
-          {/* 登录表单 */}
           {step === 'login' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">手机号</label>
-                <input
-                  type="tel"
-                  className="input"
-                  placeholder="请输入手机号"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+                <label className="block text-sm mb-2" style={{color: '#666'}}>手机号</label>
+                <input type="tel" className="input" placeholder="请输入手机号" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">密码</label>
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="请输入密码"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <label className="block text-sm mb-2" style={{color: '#666'}}>密码</label>
+                <input type="password" className="input" placeholder="请输入密码" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              <button
-                onClick={handleLogin}
-                disabled={loading}
-                className="btn-primary w-full disabled:opacity-50"
-              >
+              <button onClick={handleLogin} disabled={loading} className="btn-primary w-full disabled:opacity-50">
                 {loading ? '登录中...' : '登录'}
               </button>
               <div className="flex justify-between text-sm">
-                <button onClick={() => { resetForm(); setStep('register') }} className="text-orange-500 hover:underline">
-                  注册账号
-                </button>
-                <button onClick={() => { resetForm(); setStep('forgot') }} className="text-gray-500 hover:underline">
-                  忘记密码？
-                </button>
+                <button onClick={() => { resetForm(); setStep('register') }} className="text-orange-500 hover:underline">注册账号</button>
+                <button onClick={() => { resetForm(); setStep('forgot') }} className="text-gray-500 hover:underline">忘记密码？</button>
               </div>
             </div>
           )}
 
-          {/* 注册表单 */}
           {step === 'register' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">手机号 *</label>
-                <input
-                  type="tel"
-                  className="input"
-                  placeholder="请输入手机号"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+                <label className="block text-sm mb-2" style={{color: '#666'}}>手机号 *</label>
+                <input type="tel" className="input" placeholder="请输入手机号" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">设置密码 *</label>
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="请输入密码（字母、数字、标点符号）"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <p className="text-xs text-orange-500 mt-1">⚠️ 密码是您的唯一登录方式，请牢牢记住！</p>
+                <label className="block text-sm mb-2" style={{color: '#666'}}>设置密码 *</label>
+                <input type="password" className="input" placeholder="请输入密码（字母、数字、标点符号）" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <p className="text-xs mt-1" style={{color: '#ffa06f'}}>⚠️ 密码是您的唯一登录方式，请牢牢记住！</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">确认密码 *</label>
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="请再次输入密码"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
+                <label className="block text-sm mb-2" style={{color: '#666'}}>确认密码 *</label>
+                <input type="password" className="input" placeholder="请再次输入密码" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">密保问题1 *</label>
-                <select
-                  className="input mb-2"
-                  value={securityQuestion1}
-                  onChange={(e) => { setSecurityQuestion1(e.target.value); setCustomQuestion1(''); }}
-                >
+                <label className="block text-sm mb-2" style={{color: '#666'}}>密保问题1 *</label>
+                <select className="input mb-2" value={securityQuestion1} onChange={(e) => { setSecurityQuestion1(e.target.value); setCustomQuestion1(''); }}>
                   <option value="">选择或自定义问题</option>
-                  {fixedQuestions.map((q) => (
-                    <option key={q} value={q}>{q}</option>
-                  ))}
+                  {fixedQuestions.map((q) => (<option key={q} value={q}>{q}</option>))}
                   <option value="custom">自定义问题</option>
                 </select>
                 {(securityQuestion1 === 'custom' || !fixedQuestions.includes(securityQuestion1)) && (
-                  <input
-                    type="text"
-                    className="input mb-2"
-                    placeholder="请输入自定义问题"
-                    value={customQuestion1}
-                    onChange={(e) => setCustomQuestion1(e.target.value)}
-                  />
+                  <input type="text" className="input mb-2" placeholder="请输入自定义问题" value={customQuestion1} onChange={(e) => setCustomQuestion1(e.target.value)} />
                 )}
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="请输入密保答案1"
-                  value={securityAnswer1}
-                  onChange={(e) => setSecurityAnswer1(e.target.value)}
-                />
+                <input type="text" className="input" placeholder="请输入密保答案1" value={securityAnswer1} onChange={(e) => setSecurityAnswer1(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">密保问题2 *</label>
-                <select
-                  className="input mb-2"
-                  value={securityQuestion2}
-                  onChange={(e) => { setSecurityQuestion2(e.target.value); setCustomQuestion2(''); }}
-                >
+                <label className="block text-sm mb-2" style={{color: '#666'}}>密保问题2 *</label>
+                <select className="input mb-2" value={securityQuestion2} onChange={(e) => { setSecurityQuestion2(e.target.value); setCustomQuestion2(''); }}>
                   <option value="">选择或自定义问题</option>
-                  {fixedQuestions.map((q) => (
-                    <option key={q} value={q}>{q}</option>
-                  ))}
+                  {fixedQuestions.map((q) => (<option key={q} value={q}>{q}</option>))}
                   <option value="custom">自定义问题</option>
                 </select>
                 {(securityQuestion2 === 'custom' || !fixedQuestions.includes(securityQuestion2)) && (
-                  <input
-                    type="text"
-                    className="input mb-2"
-                    placeholder="请输入自定义问题"
-                    value={customQuestion2}
-                    onChange={(e) => setCustomQuestion2(e.target.value)}
-                  />
+                  <input type="text" className="input mb-2" placeholder="请输入自定义问题" value={customQuestion2} onChange={(e) => setCustomQuestion2(e.target.value)} />
                 )}
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="请输入密保答案2"
-                  value={securityAnswer2}
-                  onChange={(e) => setSecurityAnswer2(e.target.value)}
-                />
+                <input type="text" className="input" placeholder="请输入密保答案2" value={securityAnswer2} onChange={(e) => setSecurityAnswer2(e.target.value)} />
               </div>
-              <button
-                onClick={handleRegister}
-                disabled={loading}
-                className="btn-primary w-full disabled:opacity-50"
-              >
+              <button onClick={handleRegister} disabled={loading} className="btn-primary w-full disabled:opacity-50">
                 {loading ? '注册中...' : '注册'}
               </button>
               <button onClick={() => { resetForm(); setStep('login') }} className="w-full text-center text-sm text-gray-500 hover:underline">
@@ -413,88 +319,44 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             </div>
           )}
 
-          {/* 忘记密码 */}
           {step === 'forgot' && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">请输入注册时使用的手机号</p>
+              <p className="text-sm" style={{color: '#666'}}>请输入注册时使用的手机号</p>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">手机号</label>
-                <input
-                  type="tel"
-                  className="input"
-                  placeholder="请输入手机号"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+                <label className="block text-sm mb-2" style={{color: '#666'}}>手机号</label>
+                <input type="tel" className="input" placeholder="请输入手机号" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
-              <button
-                onClick={() => { if (phone) setStep('verify'); else setError('请输入手机号'); }}
-                className="btn-primary w-full"
-              >
-                下一步
-              </button>
-              <button onClick={() => { resetForm(); setStep('login') }} className="w-full text-center text-sm text-gray-500 hover:underline">
-                返回登录
-              </button>
+              <button onClick={() => { if (phone) setStep('verify'); else setError('请输入手机号'); }} className="btn-primary w-full">下一步</button>
+              <button onClick={() => { resetForm(); setStep('login') }} className="w-full text-center text-sm text-gray-500 hover:underline">返回登录</button>
             </div>
           )}
 
-          {/* 验证密保 */}
           {step === 'verify' && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">请回答您的密保问题（回答任意一个即可）</p>
+              <p className="text-sm" style={{color: '#666'}}>请回答您的密保问题（回答任意一个即可）</p>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">密保答案</label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="请输入密保答案"
-                  value={securityAnswer1}
-                  onChange={(e) => setSecurityAnswer1(e.target.value)}
-                />
+                <label className="block text-sm mb-2" style={{color: '#666'}}>密保答案</label>
+                <input type="text" className="input" placeholder="请输入密保答案" value={securityAnswer1} onChange={(e) => setSecurityAnswer1(e.target.value)} />
               </div>
-              <button
-                onClick={handleVerifyAnswer}
-                disabled={loading}
-                className="btn-primary w-full disabled:opacity-50"
-              >
+              <button onClick={handleVerifyAnswer} disabled={loading} className="btn-primary w-full disabled:opacity-50">
                 {loading ? '验证中...' : '验证'}
               </button>
-              <button onClick={() => { resetForm(); setStep('forgot') }} className="w-full text-center text-sm text-gray-500 hover:underline">
-                返回
-              </button>
+              <button onClick={() => { resetForm(); setStep('forgot') }} className="w-full text-center text-sm text-gray-500 hover:underline">返回</button>
             </div>
           )}
 
-          {/* 重置密码 */}
           {step === 'reset' && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">请设置新密码</p>
+              <p className="text-sm" style={{color: '#666'}}>请设置新密码</p>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">新密码</label>
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="请输入新密码"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <label className="block text-sm mb-2" style={{color: '#666'}}>新密码</label>
+                <input type="password" className="input" placeholder="请输入新密码" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">确认新密码</label>
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="请再次输入新密码"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
+                <label className="block text-sm mb-2" style={{color: '#666'}}>确认新密码</label>
+                <input type="password" className="input" placeholder="请再次输入新密码" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
               </div>
-              <button
-                onClick={handleResetPassword}
-                disabled={loading}
-                className="btn-primary w-full disabled:opacity-50"
-              >
+              <button onClick={handleResetPassword} disabled={loading} className="btn-primary w-full disabled:opacity-50">
                 {loading ? '重置中...' : '重置密码'}
               </button>
             </div>
