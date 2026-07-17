@@ -52,37 +52,50 @@ function EditItemContent() {
   const categories = ['教材', '考研', '考公', '技能证书', '其他']
 
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login')
-      return
+    if (id) {
+      loadBook(id)
+    } else {
+      setLoading(false)
     }
-    if (id) loadBook(id)
-  }, [id, user])
+  }, [id])
 
   const loadBook = async (bookId: string) => {
-    const { data } = await supabase
-      .from('books')
-      .select('*')
-      .eq('id', bookId)
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from('books')
+        .select('*')
+        .eq('id', bookId)
+        .single()
 
-    if (data) {
-      if (data.user_id !== user?.id) {
-        setError('无权编辑此商品')
+      if (error) {
+        console.error('Error loading book:', error)
+        setError('加载商品失败')
+        setLoading(false)
         return
       }
-      setTitle(data.title || '')
-      setIsbn(data.isbn || '')
-      setAuthor(data.author || '')
-      setPublisher(data.publisher || '')
-      setPrice(data.price?.toString() || '')
-      setOriginalPrice(data.original_price?.toString() || '')
-      setCondition(data.condition || '九成新')
-      setCategory(data.category || '教材')
-      setGrade(data.grade || '')
-      setSubject(data.subject || '')
-      setImageUrl(data.image_url || '')
-      setDescription(data.description || '')
+
+      if (data) {
+        if (user && data.user_id !== user.id) {
+          setError('无权编辑此商品')
+          setLoading(false)
+          return
+        }
+        setTitle(data.title || '')
+        setIsbn(data.isbn || '')
+        setAuthor(data.author || '')
+        setPublisher(data.publisher || '')
+        setPrice(data.price?.toString() || '')
+        setOriginalPrice(data.original_price?.toString() || '')
+        setCondition(data.condition || '九成新')
+        setCategory(data.category || '教材')
+        setGrade(data.grade || '')
+        setSubject(data.subject || '')
+        setImageUrl(data.image_url || '')
+        setDescription(data.description || '')
+      }
+    } catch (err) {
+      console.error('Error:', err)
+      setError('加载商品失败')
     }
     setLoading(false)
   }
@@ -94,9 +107,14 @@ function EditItemContent() {
     const fileExt = file.name.split('.').pop()
     const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
-    const { data } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from('book-images')
       .upload(fileName, file)
+
+    if (error) {
+      console.error('Upload error:', error)
+      return
+    }
 
     if (data) {
       const { data: urlData } = supabase.storage.from('book-images').getPublicUrl(fileName)
@@ -148,6 +166,16 @@ function EditItemContent() {
   }
 
   if (loading) return <LoadingSpinner />
+
+  if (error && !title) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 py-20">
+        <span className="text-6xl mb-4">❌</span>
+        <h2 className="text-xl font-semibold mb-2" style={{color: '#333'}}>{error}</h2>
+        <a href="/my/items" className="btn-primary mt-4">返回我的发布</a>
+      </div>
+    )
+  }
 
   return (
     <div className="pb-20">
