@@ -20,6 +20,7 @@ interface BookDetail {
   grade: string
   subject: string
   image_url: string | null
+  images: string[] | null
   isbn: string | null
   author: string | null
   publisher: string | null
@@ -44,6 +45,8 @@ export default function DetailContent() {
   const [isbnCount, setIsbnCount] = useState(0)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const [showImageViewer, setShowImageViewer] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   useEffect(() => {
     if (id) {
@@ -160,6 +163,36 @@ export default function DetailContent() {
     setBook({ ...book!, status: '已下架' })
   }
 
+  const openImageViewer = (index: number) => {
+    setCurrentImageIndex(index)
+    setShowImageViewer(true)
+  }
+
+  const closeImageViewer = () => {
+    setShowImageViewer(false)
+  }
+
+  const nextImage = () => {
+    const allImages = getAllImages()
+    if (currentImageIndex < allImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1)
+    }
+  }
+
+  const prevImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1)
+    }
+  }
+
+  const getAllImages = () => {
+    if (!book) return []
+    if (book.images && book.images.length > 0) {
+      return book.images.filter(img => img)
+    }
+    return book.image_url ? [book.image_url] : []
+  }
+
   if (loading) return <LoadingSpinner />
   if (!book) {
     return (
@@ -172,6 +205,7 @@ export default function DetailContent() {
   }
 
   const isMine = user?.id === book.user_id
+  const allImages = getAllImages()
 
   return (
     <div className="pb-20">
@@ -179,9 +213,20 @@ export default function DetailContent() {
         <BackButton />
       </div>
       
-      {book.image_url ? (
+      {/* 图片轮播区域 */}
+      {allImages.length > 0 ? (
         <div className="relative">
-          <img src={book.image_url} alt={book.title} className="w-full h-[300px] object-cover" />
+          <div 
+            className="w-full h-[300px] cursor-pointer"
+            onClick={() => openImageViewer(0)}
+          >
+            <img src={allImages[0]} alt={book.title} className="w-full h-full object-cover" />
+          </div>
+          {allImages.length > 1 && (
+            <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full text-xs" style={{background: 'rgba(0,0,0,0.5)', color: '#fff'}}>
+              {allImages.length}张图 · 点击可放大
+            </div>
+          )}
           <div className="absolute top-3 left-3 text-white text-xs px-3 py-1 rounded-full" style={{background: '#5A8F5C'}}>
             {book.condition}
           </div>
@@ -315,6 +360,53 @@ export default function DetailContent() {
           <button onClick={handleOffline} className="w-full py-3 text-center" style={{color: '#ff9800', borderBottom: '1px solid #f0f0f0'}}>下架商品</button>
           <button onClick={handleDelete} className="w-full py-3 text-center" style={{color: '#f44336', borderBottom: '1px solid #f0f0f0'}}>删除商品</button>
           <button onClick={() => setShowMore(false)} className="w-full py-3 text-center" style={{color: '#666'}}>取消</button>
+        </div>
+      )}
+
+      {/* 图片全屏查看器 */}
+      {showImageViewer && allImages.length > 0 && (
+        <div 
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
+          style={{background: 'rgba(0,0,0,0.95)'}}
+          onClick={closeImageViewer}
+        >
+          <button 
+            onClick={closeImageViewer}
+            className="absolute top-4 right-4 text-white text-2xl z-[101]"
+          >
+            ✕
+          </button>
+          
+          <div className="flex items-center justify-between w-full px-4">
+            {currentImageIndex > 0 && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); prevImage(); }}
+                className="text-white text-3xl p-2"
+              >
+                ‹
+              </button>
+            )}
+            
+            <img 
+              src={allImages[currentImageIndex]} 
+              alt="" 
+              className="max-w-full max-h-[80vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            
+            {currentImageIndex < allImages.length - 1 && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); nextImage(); }}
+                className="text-white text-3xl p-2"
+              >
+                ›
+              </button>
+            )}
+          </div>
+          
+          <div className="absolute bottom-4 text-white text-sm">
+            {currentImageIndex + 1} / {allImages.length}
+          </div>
         </div>
       )}
 
