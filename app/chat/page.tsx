@@ -32,10 +32,13 @@ function ChatContent() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [otherProfile, setOtherProfile] = useState<Profile | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!userLoading && !user) router.push('/auth/login')
+    if (!userLoading && !user) {
+      setShowAuthModal(true)
+    }
     if (user && targetId) {
       loadMessages()
       loadProfile()
@@ -117,6 +120,12 @@ function ChatContent() {
         <input className="flex-1 input" placeholder="输入消息..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} />
         <button onClick={sendMessage} disabled={!newMessage.trim() || sending} className="btn-primary px-5 disabled:opacity-50">发送</button>
       </div>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => router.refresh()}
+      />
     </div>
   )
 }
