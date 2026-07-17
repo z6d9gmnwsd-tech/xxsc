@@ -53,7 +53,7 @@ export default function LoginPage() {
       localStorage.setItem('phone', phone)
       setSuccess('登录成功！')
       setTimeout(() => {
-        router.push('/')
+        router.push('/my')
         router.refresh()
       }, 1000)
     } else {
@@ -91,6 +91,19 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
+    // 检查手机号是否已注册
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('phone', phone)
+      .single()
+
+    if (existingUser) {
+      setError('该手机号已被注册')
+      setLoading(false)
+      return
+    }
+
     const { data, error: funcError } = await supabase.rpc('register_user', {
       p_phone: phone,
       p_password: password,
@@ -111,7 +124,7 @@ export default function LoginPage() {
       localStorage.setItem('phone', phone)
       setSuccess('注册成功！您的用户名是：' + data.nickname)
       setTimeout(() => {
-        router.push('/')
+        router.push('/my')
         router.refresh()
       }, 2000)
     } else {
@@ -127,6 +140,19 @@ export default function LoginPage() {
 
     setLoading(true)
     setError('')
+
+    // 先获取用户的密保问题
+    const { data: userData } = await supabase
+      .from('profiles')
+      .select('security_question')
+      .eq('phone', phone)
+      .single()
+
+    if (!userData) {
+      setError('该手机号未注册')
+      setLoading(false)
+      return
+    }
 
     const { data, error: funcError } = await supabase.rpc('verify_security_answer', {
       p_phone: phone,
