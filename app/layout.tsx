@@ -27,7 +27,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="新校书仓" />
       </head>
       <body style={{ background: '#FBF8F3' }}>
-        <div style={{ maxWidth: '480px', margin: '0 auto', minHeight: '100vh', background: '#FBF8F3', boxShadow: '0 0 40px rgba(0,0,0,0.1)' }}>
+        <div style={{ maxWidth: '480px', margin: '0 auto', minHeight: '100vh', background: '#FBF8F3' }}>
           {children}
         </div>
       </body>
