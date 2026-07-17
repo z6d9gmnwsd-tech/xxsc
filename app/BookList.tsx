@@ -2,9 +2,21 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import BookCard, { Book } from '@/components/BookCard'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import EmptyState from '@/components/EmptyState'
+
+interface Book {
+  id: string
+  title: string
+  price: number
+  original_price: number | null
+  condition: string
+  category: string
+  grade: string
+  subject: string
+  image_url: string | null
+  created_at: string
+}
 
 interface BookListProps {
   searchQuery?: string
@@ -60,9 +72,11 @@ export default function BookList({ searchQuery = '', sortBy = 'newest', filterCa
   if (loading) return <LoadingSpinner />
   if (books.length === 0) {
     return (
-      <EmptyState
-        icon="📚"
-        title={searchQuery ? '未找到相关书籍' : '暂无商品，快来发布第一本书吧！'}
+      <EmptyState 
+        icon="📚" 
+        title="暂无商品" 
+        description="快来发布第一本书吧！" 
+        action={{ label: "去发布", href: "/publish" }}
       />
     )
   }
@@ -70,7 +84,37 @@ export default function BookList({ searchQuery = '', sortBy = 'newest', filterCa
   return (
     <div className="px-4 py-2">
       {books.map((book) => (
-        <BookCard key={book.id} book={book} />
+        <a key={book.id} href={`/detail?id=${book.id}`} className="card flex overflow-hidden mb-3 animate-fade-in block" style={{margin: '16px 0', padding: '28rpx'}}>
+          <div className="relative flex-shrink-0">
+            {book.image_url ? (
+              <img src={book.image_url} alt={book.title} className="w-[120px] h-[120px] object-cover rounded-xl" />
+            ) : (
+              <div className="w-[120px] h-[120px] flex items-center justify-center rounded-xl" style={{background: '#f0f0f0'}}>
+                <span className="text-4xl">📚</span>
+              </div>
+            )}
+            <div className="absolute top-2 left-2 text-xs px-2 py-1 rounded-full text-white" style={{background: '#5A8F5C'}}>
+              {book.condition}
+            </div>
+          </div>
+          <div className="flex-1 p-3 flex flex-col justify-between">
+            <div>
+              <h3 className="font-semibold text-sm line-clamp-2" style={{color: '#333'}}>{book.title}</h3>
+              <div className="flex gap-1 mt-1 flex-wrap">
+                <span className="tag tag-primary text-xs">{book.category}</span>
+                {book.grade && <span className="tag tag-info text-xs">{book.grade}</span>}
+              </div>
+            </div>
+            <div className="flex justify-between items-end">
+              <div>
+                <span className="text-lg font-bold" style={{color: '#ffa06f'}}>¥{book.price}</span>
+                {book.original_price && (
+                  <span className="text-xs line-through ml-2" style={{color: '#999'}}>¥{book.original_price}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </a>
       ))}
     </div>
   )
