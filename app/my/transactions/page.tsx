@@ -31,10 +31,13 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy')
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   useEffect(() => {
     if (!userLoading && !user) {
-      router.push('/auth/login')
+      if (confirm('该功能需要登录后才能使用，是否前往登录？')) {
+        window.location.href = '/my'
+      }
     }
     if (user) fetchTransactions()
   }, [user, userLoading, activeTab])
@@ -65,11 +68,11 @@ export default function TransactionsPage() {
 
   const getStatusColor = (status: string) => {
     const map: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-700',
-      completed: 'bg-green-100 text-green-700',
-      cancelled: 'bg-gray-100 text-gray-500',
+      pending: '#ff9800',
+      completed: '#27ae60',
+      cancelled: '#999',
     }
-    return map[status] || 'bg-gray-100 text-gray-500'
+    return map[status] || '#999'
   }
 
   if (userLoading || loading) return <LoadingSpinner />
@@ -77,27 +80,31 @@ export default function TransactionsPage() {
 
   return (
     <div className="pb-20">
-      <div className="bg-gradient-primary px-4 py-6 text-white">
+      <div className="px-4 py-6 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
         <div className="flex items-center gap-3">
           <BackButton />
           <h1 className="text-xl font-bold">交易记录</h1>
         </div>
       </div>
 
-      <div className="flex bg-white border-b border-gray-100">
+      <div className="flex" style={{background: '#fff', borderBottom: '1px solid #f0f0f0'}}>
         <button
           onClick={() => setActiveTab('buy')}
-          className={`flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'buy' ? 'text-orange-500 border-orange-500' : 'text-gray-500 border-transparent'
-          }`}
+          className="flex-1 py-3 text-center text-sm font-medium"
+          style={{
+            color: activeTab === 'buy' ? '#ffa06f' : '#666',
+            borderBottom: activeTab === 'buy' ? '2px solid #ffa06f' : '2px solid transparent'
+          }}
         >
           买入
         </button>
         <button
           onClick={() => setActiveTab('sell')}
-          className={`flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'sell' ? 'text-orange-500 border-orange-500' : 'text-gray-500 border-transparent'
-          }`}
+          className="flex-1 py-3 text-center text-sm font-medium"
+          style={{
+            color: activeTab === 'sell' ? '#ffa06f' : '#666',
+            borderBottom: activeTab === 'sell' ? '2px solid #ffa06f' : '2px solid transparent'
+          }}
         >
           卖出
         </button>
@@ -116,28 +123,27 @@ export default function TransactionsPage() {
             <a
               key={trans.id}
               href={`/detail?id=${trans.book_id}`}
-              className="card p-4 mb-3 animate-fade-in block"
+              className="card flex items-center gap-3 mb-3 animate-fade-in block"
+              style={{margin: '16px 0', padding: '28rpx'}}
             >
-              <div className="flex items-center gap-3">
-                {trans.books?.image_url ? (
-                  <img src={trans.books.image_url} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
-                ) : (
-                  <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-2xl">📚</span>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm truncate">{trans.books?.title || '商品已删除'}</h3>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(trans.status)}`}>
-                      {getStatusText(trans.status)}
-                    </span>
-                    <span className="text-xs text-gray-400">{getTimeAgo(trans.created_at)}</span>
-                  </div>
+              {trans.books?.image_url ? (
+                <img src={trans.books.image_url} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0" style={{background: '#f0f0f0'}}>
+                  <span className="text-2xl">📚</span>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="text-lg font-bold text-orange-500">¥{trans.price}</div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-sm truncate" style={{color: '#333'}}>{trans.books?.title || '商品已删除'}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{background: `${getStatusColor(trans.status)}20`, color: getStatusColor(trans.status)}}>
+                    {getStatusText(trans.status)}
+                  </span>
+                  <span className="text-xs" style={{color: '#999'}}>{getTimeAgo(trans.created_at)}</span>
                 </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-lg font-bold" style={{color: '#ffa06f'}}>¥{trans.price}</div>
               </div>
             </a>
           ))}
@@ -145,6 +151,12 @@ export default function TransactionsPage() {
       )}
 
       <BottomNav activePage="my" />
+      
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => router.refresh()}
+      />
     </div>
   )
 }
