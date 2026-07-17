@@ -109,9 +109,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       return
     }
 
-    const question = customQuestion || securityQuestion
-    if (!question) {
-      setError('请选择或输入密保问题')
+    const question1 = customQuestion1 || securityQuestion1
+    const question2 = customQuestion2 || securityQuestion2
+    if (!question1 || !question2) {
+      setError('请选择或输入两个密保问题')
       return
     }
 
@@ -121,8 +122,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     const { data, error: funcError } = await supabase.rpc('register_user', {
       p_phone: phone,
       p_password: password,
-      p_security_question: question,
-      p_security_answer: securityAnswer
+      p_security_question1: question1,
+      p_security_answer1: securityAnswer1,
+      p_security_question2: question2,
+      p_security_answer2: securityAnswer2
     })
 
     setLoading(false)
