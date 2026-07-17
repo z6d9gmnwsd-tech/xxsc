@@ -25,16 +25,40 @@ export default function PublishForm() {
   const [phone, setPhone] = useState('')
   const [remark, setRemark] = useState('')
   const [imageUrl, setImageUrl] = useState('')
-  const [grade, setGrade] = useState('全年级通用')
-  const [major, setMajor] = useState('全专业通用')
+  const [selectedGrades, setSelectedGrades] = useState<string[]>(['全年级通用'])
+  const [selectedMajors, setSelectedMajors] = useState<string[]>(['全专业通用'])
   const [examType, setExamType] = useState('')
-  const [examSubject, setExamSubject] = useState('')
+  const [selectedExamSubjects, setSelectedExamSubjects] = useState<string[]>([])
 
   const grades = ['全年级通用', '大一', '大二', '大三', '大四', '研一', '研二', '研三']
-  const majors = ['全专业通用', '计算机科学', '软件工程', '人工智能', '电子信息', '机械工程', '土木工程', '经济学', '金融学', '会计学', '法学', '教育学', '医学', '护理学', '其他']
+
+  const majorCategories = [
+    { name: '哲学', majors: ['哲学', '逻辑学', '宗教学'] },
+    { name: '经济学', majors: ['经济学', '经济统计学', '金融学', '国际经济与贸易', '会计学', '财务管理'] },
+    { name: '法学', majors: ['法学', '社会学', '社会工作', '政治学与行政学'] },
+    { name: '教育学', majors: ['教育学', '学前教育', '小学教育', '体育教育', '心理学'] },
+    { name: '文学', majors: ['汉语言文学', '英语', '日语', '新闻学', '传播学'] },
+    { name: '历史学', majors: ['历史学', '考古学'] },
+    { name: '理学', majors: ['数学与应用数学', '物理学', '化学', '生物科学', '统计学'] },
+    { name: '工学', majors: ['机械工程', '电气工程', '计算机科学', '软件工程', '土木工程', '建筑学'] },
+    { name: '农学', majors: ['农学', '园艺', '动物科学', '林学'] },
+    { name: '医学', majors: ['临床医学', '口腔医学', '中医学', '护理学', '药学'] },
+    { name: '管理学', majors: ['工商管理', '市场营销', '会计学', '财务管理', '人力资源管理'] },
+    { name: '艺术学', majors: ['艺术设计', '音乐学', '美术学', '动画'] }
+  ]
+
   const examTypes = ['考研', '考公考编', '其他']
-  const kaoyanSubjects = ['政治', '英语一', '英语二', '数学一', '数学二', '数学三', '专业课']
-  const gongbianSubjects = ['行政职业能力测验', '申论', '公共基础知识', '综合应用能力']
+
+  const kaoyanCategories = [
+    { name: '公共课', subjects: ['政治', '英语一', '英语二', '数学一', '数学二', '数学三', '俄语', '日语'] },
+    { name: '专业课（统考）', subjects: ['计算机学科专业基础（408）', '教育学专业基础（311）', '心理学专业基础（312）', '历史学基础（313）', '数学分析/高等代数', '西医综合（306）', '中医综合（307）', '法律硕士专业基础（398）', '法律硕士综合（498）', '管理类联考综合能力（199）', '经济类联考综合能力（396）'] },
+    { name: '专业课（非统考/自命题）', subjects: ['自命题专业课'] }
+  ]
+
+  const gongbianCategories = [
+    { name: '笔试科目', subjects: ['行政职业能力测验', '申论', '公共基础知识', '综合应用能力', '职业能力倾向测验'] },
+    { name: '考试类型', subjects: ['国家公务员考试', '省公务员考试', '事业单位考试', '教师资格考试', '银行/国企招聘', '军队文职'] }
+  ]
 
   if (!user) {
     return (
@@ -81,6 +105,42 @@ export default function PublishForm() {
     setUploading(false)
   }
 
+  const toggleGrade = (grade: string) => {
+    if (grade === '全年级通用') {
+      setSelectedGrades(['全年级通用'])
+    } else {
+      let newGrades = selectedGrades.filter(g => g !== '全年级通用')
+      if (newGrades.includes(grade)) {
+        newGrades = newGrades.filter(g => g !== grade)
+      } else {
+        newGrades.push(grade)
+      }
+      setSelectedGrades(newGrades.length === 0 ? ['全年级通用'] : newGrades)
+    }
+  }
+
+  const toggleMajor = (major: string) => {
+    if (major === '全专业通用') {
+      setSelectedMajors(['全专业通用'])
+    } else {
+      let newMajors = selectedMajors.filter(m => m !== '全专业通用')
+      if (newMajors.includes(major)) {
+        newMajors = newMajors.filter(m => m !== major)
+      } else {
+        newMajors.push(major)
+      }
+      setSelectedMajors(newMajors.length === 0 ? ['全专业通用'] : newMajors)
+    }
+  }
+
+  const toggleExamSubject = (subject: string) => {
+    if (selectedExamSubjects.includes(subject)) {
+      setSelectedExamSubjects(selectedExamSubjects.filter(s => s !== subject))
+    } else {
+      setSelectedExamSubjects([...selectedExamSubjects, subject])
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -109,8 +169,8 @@ export default function PublishForm() {
       original_price: originalPrice ? parseFloat(originalPrice) : null,
       condition,
       category: type === 'textbook' ? '教材' : '备考资料',
-      grade: type === 'textbook' ? grade : '',
-      subject: type === 'textbook' ? major : (examType ? `${examType}${examSubject ? '-' + examSubject : ''}` : ''),
+      grade: type === 'textbook' ? selectedGrades.join(',') : '',
+      subject: type === 'textbook' ? selectedMajors.join(',') : (examType ? `${examType}|${selectedExamSubjects.join(',')}` : ''),
       image_url: imageUrl,
       description: `微信号：${wechat || '无'}\n联系电话：${phone || '无'}\n备注：${remark || '无'}`,
     })
@@ -176,7 +236,7 @@ export default function PublishForm() {
 
         {/* 商品图片 */}
         <div className="rounded-2xl p-4" style={{background: '#fff'}}>
-          <h3 className="font-bold mb-3" style={{color: '#333'}}>商品图片（最多5张）</h3>
+          <h3 className="font-bold mb-3" style={{color: '#333'}}>商品图片</h3>
           <div className="flex gap-3 items-start">
             {imageUrl ? (
               <div className="relative">
@@ -249,18 +309,51 @@ export default function PublishForm() {
         {type === 'textbook' && (
           <div className="rounded-2xl p-4" style={{background: '#fff'}}>
             <h3 className="font-bold mb-3" style={{color: '#333'}}>适用范围（必填）</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm" style={{color: '#333'}}>适用年级</span>
-                <select className="input w-40 text-right" value={grade} onChange={(e) => setGrade(e.target.value)}>
-                  {grades.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
+            
+            <div className="mb-4">
+              <div className="text-sm mb-2" style={{color: '#333'}}>适用年级（可多选）</div>
+              <div className="flex flex-wrap gap-2">
+                {grades.map(g => (
+                  <div
+                    key={g}
+                    onClick={() => toggleGrade(g)}
+                    className="px-3 py-1.5 rounded-full text-sm cursor-pointer"
+                    style={{
+                      background: selectedGrades.includes(g) ? '#F5E6D0' : '#f0f2f5',
+                      color: selectedGrades.includes(g) ? '#fff' : '#636e72',
+                      border: `1px solid ${selectedGrades.includes(g) ? '#F5E6D0' : '#e0e0e0'}`
+                    }}
+                  >
+                    {g}
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm" style={{color: '#333'}}>适用专业</span>
-                <select className="input w-40 text-right" value={major} onChange={(e) => setMajor(e.target.value)}>
-                  {majors.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
+            </div>
+
+            <div>
+              <div className="text-sm mb-2" style={{color: '#333'}}>适用专业（可多选）</div>
+              <div className="max-h-60 overflow-y-auto">
+                {majorCategories.map(category => (
+                  <div key={category.name} className="mb-3">
+                    <div className="text-xs font-semibold mb-1" style={{color: '#999'}}>{category.name}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {category.majors.map(m => (
+                        <div
+                          key={m}
+                          onClick={() => toggleMajor(m)}
+                          className="px-2 py-1 rounded-full text-xs cursor-pointer"
+                          style={{
+                            background: selectedMajors.includes(m) ? '#F5E6D0' : '#f0f2f5',
+                            color: selectedMajors.includes(m) ? '#fff' : '#636e72',
+                            border: `1px solid ${selectedMajors.includes(m) ? '#F5E6D0' : '#e0e0e0'}`
+                          }}
+                        >
+                          {m}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -274,7 +367,7 @@ export default function PublishForm() {
               {examTypes.map(et => (
                 <div
                   key={et}
-                  onClick={() => setExamType(et)}
+                  onClick={() => { setExamType(et); setSelectedExamSubjects([]); }}
                   className="flex-1 p-3 rounded-xl text-center cursor-pointer"
                   style={{
                     background: examType === et ? '#FFF8F0' : '#fff',
@@ -286,44 +379,58 @@ export default function PublishForm() {
                 </div>
               ))}
             </div>
+
             {examType === '考研' && (
-              <div className="mt-3">
-                <div className="text-sm mb-2" style={{color: '#666'}}>选择科目（可多选）</div>
-                <div className="flex flex-wrap gap-2">
-                  {kaoyanSubjects.map(s => (
-                    <div
-                      key={s}
-                      onClick={() => setExamSubject(examSubject === s ? '' : s)}
-                      className="px-3 py-1 rounded-full text-sm cursor-pointer"
-                      style={{
-                        background: examSubject === s ? '#F5E6D0' : '#f0f2f5',
-                        color: examSubject === s ? '#fff' : '#636e72'
-                      }}
-                    >
-                      {s}
+              <div className="mt-4">
+                <div className="text-sm font-semibold mb-3" style={{color: '#333'}}>考研科目（可多选）</div>
+                {kaoyanCategories.map(category => (
+                  <div key={category.name} className="mb-3">
+                    <div className="text-xs mb-2" style={{color: '#999'}}>{category.name}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {category.subjects.map(s => (
+                        <div
+                          key={s}
+                          onClick={() => toggleExamSubject(s)}
+                          className="px-3 py-1.5 rounded-full text-sm cursor-pointer"
+                          style={{
+                            background: selectedExamSubjects.includes(s) ? '#F5E6D0' : '#f0f2f5',
+                            color: selectedExamSubjects.includes(s) ? '#fff' : '#636e72',
+                            border: `1px solid ${selectedExamSubjects.includes(s) ? '#F5E6D0' : '#e0e0e0'}`
+                          }}
+                        >
+                          {s}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             )}
+
             {examType === '考公考编' && (
-              <div className="mt-3">
-                <div className="text-sm mb-2" style={{color: '#666'}}>选择科目（可多选）</div>
-                <div className="flex flex-wrap gap-2">
-                  {gongbianSubjects.map(s => (
-                    <div
-                      key={s}
-                      onClick={() => setExamSubject(examSubject === s ? '' : s)}
-                      className="px-3 py-1 rounded-full text-sm cursor-pointer"
-                      style={{
-                        background: examSubject === s ? '#F5E6D0' : '#f0f2f5',
-                        color: examSubject === s ? '#fff' : '#636e72'
-                      }}
-                    >
-                      {s}
+              <div className="mt-4">
+                <div className="text-sm font-semibold mb-3" style={{color: '#333'}}>考试科目（可多选）</div>
+                {gongbianCategories.map(category => (
+                  <div key={category.name} className="mb-3">
+                    <div className="text-xs mb-2" style={{color: '#999'}}>{category.name}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {category.subjects.map(s => (
+                        <div
+                          key={s}
+                          onClick={() => toggleExamSubject(s)}
+                          className="px-3 py-1.5 rounded-full text-sm cursor-pointer"
+                          style={{
+                            background: selectedExamSubjects.includes(s) ? '#F5E6D0' : '#f0f2f5',
+                            color: selectedExamSubjects.includes(s) ? '#fff' : '#636e72',
+                            border: `1px solid ${selectedExamSubjects.includes(s) ? '#F5E6D0' : '#e0e0e0'}`
+                          }}
+                        >
+                          {s}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -367,7 +474,7 @@ export default function PublishForm() {
 
         {/* 联系方式 */}
         <div className="rounded-2xl p-4" style={{background: '#fff'}}>
-          <h3 className="font-bold mb-3" style={{color: '#333'}}>联系方式（选填）</h3>
+          <h3 className="font-bold mb-3" style={{color: '#333'}}>联系方式</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <span className="w-20 text-sm" style={{color: '#333'}}>微信号</span>
