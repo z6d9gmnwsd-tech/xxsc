@@ -11,6 +11,12 @@ export default function MyPage() {
   const router = useRouter()
   const [showAuthModal, setShowAuthModal] = useState(false)
 
+  const handleLogout = () => {
+    if (confirm('确定要退出登录吗？')) {
+      logout()
+    }
+  }
+
   return (
     <div className="pb-20">
       <div className="px-4 py-8 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
@@ -35,7 +41,7 @@ export default function MyPage() {
           </div>
           {user && (
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="text-sm px-3 py-1.5 rounded-full"
               style={{background: 'rgba(255,255,255,0.2)'}}
             >
@@ -84,7 +90,10 @@ export default function MyPage() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onSuccess={() => router.refresh()}
+        onSuccess={() => {
+          setShowAuthModal(false)
+          router.refresh()
+        }}
       />
     </div>
   )
