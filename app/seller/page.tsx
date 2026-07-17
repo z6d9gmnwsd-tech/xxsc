@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
@@ -26,7 +26,7 @@ interface SellerProfile {
   bio: string | null
 }
 
-export default function SellerPage() {
+function SellerContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = usePhoneAuth()
@@ -145,5 +145,13 @@ export default function SellerPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function SellerPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <SellerContent />
+    </Suspense>
   )
 }
