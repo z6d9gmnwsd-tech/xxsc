@@ -43,6 +43,7 @@ export default function DetailContent() {
   const [isFavorite, setIsFavorite] = useState(false)
   const [isbnCount, setIsbnCount] = useState(0)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showMore, setShowMore] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -122,10 +123,41 @@ export default function DetailContent() {
     }
   }
 
-  const startChat = () => {
-    if (!user) { setShowAuthModal(true); return }
+  const handleCopyWechat = () => {
+    if (book?.description) {
+      const wechatMatch = book.description.match(/微信号：(.+?)[\n\r]/)
+      if (wechatMatch) {
+        navigator.clipboard.writeText(wechatMatch[1].trim())
+        alert('微信号已复制')
+      }
+    }
+  }
+
+  const handleCallPhone = () => {
+    if (book?.description) {
+      const phoneMatch = book.description.match(/联系电话：(.+?)[\n\r]/)
+      if (phoneMatch) {
+        window.location.href = `tel:${phoneMatch[1].trim()}`
+      }
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!book || !confirm('确定要删除这个商品吗？')) return
+    await supabase.from('books').delete().eq('id', book.id)
+    router.push('/')
+  }
+
+  const handleMarkSold = async () => {
     if (!book) return
-    router.push(`/chat?id=${book.user_id}`)
+    await supabase.from('books').update({ status: '已售出' }).eq('id', book.id)
+    setBook({ ...book!, status: '已售出' })
+  }
+
+  const handleOffline = async () => {
+    if (!book) return
+    await supabase.from('books').update({ status: '已下架' }).eq('id', book.id)
+    setBook({ ...book!, status: '已下架' })
   }
 
   if (loading) return <LoadingSpinner />
@@ -146,6 +178,7 @@ export default function DetailContent() {
       <div className="fixed top-4 left-4 z-50 max-w-[480px]">
         <BackButton />
       </div>
+      
       {book.image_url ? (
         <div className="relative">
           <img src={book.image_url} alt={book.title} className="w-full h-[300px] object-cover" />
@@ -175,7 +208,7 @@ export default function DetailContent() {
         </div>
         {book.isbn && isbnCount > 0 && (
           <a href={`/isbn?isbn=${book.isbn}`} className="flex items-center gap-1 mt-3 text-sm" style={{color: '#ffa06f'}}>
-            查看同ISBN商品比价（{isbnCount}件在售）
+            🔍 查看同ISBN商品比价（{isbnCount}件在售）
           </a>
         )}
       </div>
@@ -196,7 +229,7 @@ export default function DetailContent() {
       {book.profiles && (
         <div className="mt-2 p-4" style={{background: '#fff'}}>
           <h2 className="font-semibold mb-3" style={{color: '#333'}}>卖家信息</h2>
-          <a href={`/seller?id=${book.user_id}`} className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden" style={{background: '#e0e0e0'}}>
               {book.profiles.avatar_url ? (
                 <img src={book.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -208,34 +241,82 @@ export default function DetailContent() {
               <div className="font-medium" style={{color: '#333'}}>{book.profiles.nickname || '匿名用户'}</div>
               {book.profiles.school && <div className="text-xs" style={{color: '#999'}}>{book.profiles.school}</div>}
             </div>
-            <span style={{color: '#ccc'}}>›</span>
-          </a>
+          </div>
+          
+          <div className="flex gap-3 mb-4">
+            <button onClick={handleCopyWechat} className="flex-1 py-2 rounded-xl text-sm font-medium" style={{background: '#e8f8f0', color: '#27ae60', border: '1px solid #c8e6c9'}}>
+              👤 复制微信号
+            </button>
+            <button onClick={handleCallPhone} className="flex-1 py-2 rounded-xl text-sm font-medium" style={{background: '#e3f2fd', color: '#2196f3', border: '1px solid #bbdefb'}}>
+              📞 拨打电话
+            </button>
+          </div>
+
+          {book.description && (
+            <>
+              {book.description.includes('微信号') && (
+                <div className="p-3 rounded-xl mb-2" style={{background: '#f5f5f5'}}>
+                  <div className="text-xs" style={{color: '#999'}}>卖家微信号</div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="font-medium" style={{color: '#333'}}>{book.description.match(/微信号：(.+?)[\n\r]/)?.[1]?.trim() || '未填写'}</span>
+                    <button onClick={handleCopyWechat} className="px-3 py-1 rounded-lg text-sm" style={{background: '#ffa06f', color: '#fff'}}>复制</button>
+                  </div>
+                </div>
+              )}
+              {book.description.includes('联系电话') && (
+                <div className="p-3 rounded-xl" style={{background: '#f5f5f5'}}>
+                  <div className="text-xs" style={{color: '#999'}}>联系电话</div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="font-medium" style={{color: '#333'}}>{book.description.match(/联系电话：(.+?)[\n\r]/)?.[1]?.trim() || '未填写'}</span>
+                    <button onClick={handleCallPhone} className="px-3 py-1 rounded-lg text-sm" style={{background: '#ffa06f', color: '#fff'}}>拨打</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] p-3 flex gap-3 z-50" style={{background: '#fff', borderTop: '1px solid #e0e0e0'}}>
-        <button
-          onClick={toggleFavorite}
-          className="flex items-center gap-1 px-4 py-2.5 rounded-full border text-sm font-medium"
-          style={{
-            background: isFavorite ? '#FBF8F3' : '#f5f5f5',
-            color: isFavorite ? '#ffa06f' : '#666',
-            borderColor: isFavorite ? '#E0C9A8' : '#e0e0e0'
-          }}
-        >
-          {isFavorite ? '⭐ 已收藏' : '☆ 收藏'}
+      <div className="p-4" style={{background: '#FFF8E1', borderLeft: '4px solid #FF9800'}}>
+        <div className="flex items-start gap-2">
+          <span className="text-xl">⚠️</span>
+          <p className="text-sm" style={{color: '#F57C00'}}>本平台仅提供信息撮合服务，不涉及在线支付，请当面交易，谨防诈骗</p>
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 p-3 flex gap-3 z-50" style={{background: '#fff', borderTop: '1px solid #e0e0e0'}}>
+        <button onClick={toggleFavorite} className="flex flex-col items-center gap-1 px-4 py-2" style={{color: isFavorite ? '#ffa06f' : '#666'}}>
+          <span className="text-xl">{isFavorite ? '⭐' : '☆'}</span>
+          <span className="text-xs">{isFavorite ? '已收藏' : '收藏'}</span>
         </button>
-        {!isMine ? (
-          <>
-            <a href={`/report?id=${book.id}&type=book`} className="flex items-center gap-1 px-4 py-2.5 rounded-full border text-sm font-medium" style={{background: '#f5f5f5', color: '#666', borderColor: '#e0e0e0'}}>
-              ⚠️ 举报
-            </a>
-            <button onClick={startChat} className="flex-1 btn-primary py-2.5">联系卖家</button>
-          </>
+        <button className="flex flex-col items-center gap-1 px-4 py-2" style={{color: '#666'}}>
+          <span className="text-xl">↗️</span>
+          <span className="text-xs">分享</span>
+        </button>
+        {isMine ? (
+          <button onClick={() => router.push(`/editItem?id=${book.id}`)} className="flex-1 py-3 rounded-xl text-white font-semibold" style={{background: '#5c6bc0'}}>
+            编辑商品
+          </button>
         ) : (
-          <div className="flex-1 text-center py-2.5 text-sm" style={{color: '#ccc'}}>这是你的商品</div>
+          <button onClick={() => { if (!user) { setShowAuthModal(true) } else { alert('功能开发中') } }} className="flex-1 py-3 rounded-xl text-white font-semibold" style={{background: '#ffa06f'}}>
+            联系卖家
+          </button>
+        )}
+        {isMine && (
+          <button onClick={() => setShowMore(!showMore)} className="px-4 py-2 rounded-xl" style={{background: '#f5f5f5', color: '#666'}}>
+            更多
+          </button>
         )}
       </div>
+
+      {showMore && isMine && (
+        <div className="fixed bottom-20 left-0 right-0 p-4 z-50" style={{background: '#fff', borderTop: '1px solid #e0e0e0'}}>
+          <button onClick={handleMarkSold} className="w-full py-3 text-center" style={{color: '#27ae60', borderBottom: '1px solid #f0f0f0'}}>标记为已售出</button>
+          <button onClick={handleOffline} className="w-full py-3 text-center" style={{color: '#ff9800', borderBottom: '1px solid #f0f0f0'}}>下架商品</button>
+          <button onClick={handleDelete} className="w-full py-3 text-center" style={{color: '#f44336', borderBottom: '1px solid #f0f0f0'}}>删除商品</button>
+          <button onClick={() => setShowMore(false)} className="w-full py-3 text-center" style={{color: '#666'}}>取消</button>
+        </div>
+      )}
 
       <AuthModal
         isOpen={showAuthModal}
