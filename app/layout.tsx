@@ -25,9 +25,12 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="新校书仓" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body style={{ background: '#FBF8F3' }}>
-        <div style={{ maxWidth: '480px', margin: '0 auto', minHeight: '100vh', background: '#FBF8F3' }}>
+      <body style={{background: '#F2F2F7'}}>
+        <div className="app-container">
           {children}
         </div>
       </body>
