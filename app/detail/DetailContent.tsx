@@ -664,9 +664,11 @@ export default function DetailContent() {
       )}
 
       {/* Auth Modal */}
-      {showAuthModal && (
-        <AuthModal onClose={() => setShowAuthModal(false)} />
-      )}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => router.refresh()}
+      />
     </div>
   )
 }
