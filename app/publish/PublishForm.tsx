@@ -1,9 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import { useRouter } from 'next/navigation'
+
+interface ToastProps {
+  show: boolean
+  type: 'success' | 'error' | 'info'
+  message: string
+}
+
+function Toast({ show, type, message }: ToastProps) {
+  if (!show) return null
+  
+  const icons = {
+    success: '✓',
+    error: '✕',
+    info: 'ℹ'
+  }
+  
+  const colors = {
+    success: { bg: '#e8f8f0', icon: '#27ae60', text: '#27ae60' },
+    error: { bg: '#FFF0F0', icon: '#ee0a24', text: '#ee0a24' },
+    info: { bg: '#e3f2fd', icon: '#2196f3', text: '#2196f3' }
+  }
+  
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-[100]" style={{background: 'rgba(0,0,0,0.3)'}}>
+      <div className="px-8 py-6 rounded-2xl flex flex-col items-center" style={{background: colors[type].bg}}>
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3" style={{background: colors[type].icon}}>
+          <span className="text-3xl text-white">{icons[type]}</span>
+        </div>
+        <p className="text-lg font-semibold" style={{color: colors[type].text}}>{message}</p>
+      </div>
+    </div>
+  )
+}
 
 export default function PublishForm() {
   const { user } = usePhoneAuth()
@@ -13,6 +46,7 @@ export default function PublishForm() {
   const [success, setSuccess] = useState('')
   const [uploading, setUploading] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [toast, setToast] = useState<ToastProps>({ show: false, type: 'success', message: '' })
 
   const [type, setType] = useState<'textbook' | 'material'>('textbook')
   const [title, setTitle] = useState('')
@@ -61,6 +95,11 @@ export default function PublishForm() {
     { name: '考试类型', subjects: ['国家公务员考试', '省公务员考试', '事业单位考试', '教师资格考试', '银行/国企招聘', '军队文职'] }
   ]
 
+  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+    setToast({ show: true, type, message })
+    setTimeout(() => setToast({ show: false, type: 'success', message: '' }), 2000)
+  }
+
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center p-8 py-20" style={{minHeight: '60vh'}}>
@@ -84,7 +123,7 @@ export default function PublishForm() {
     const filesToUpload = Array.from(files).slice(0, remainingSlots)
 
     if (filesToUpload.length === 0) {
-      setError('最多只能上传5张图片')
+      showToast('error', '最多只能上传5张图片')
       return
     }
 
@@ -93,7 +132,7 @@ export default function PublishForm() {
 
     for (const file of filesToUpload) {
       if (file.size > 5 * 1024 * 1024) {
-        setError('图片大小不能超过5MB')
+        showToast('error', '图片大小不能超过5MB')
         setUploading(false)
         return
       }
@@ -106,7 +145,7 @@ export default function PublishForm() {
         .upload(fileName, file)
 
       if (uploadError) {
-        setError('图片上传失败：' + uploadError.message)
+        showToast('error', '图片上传失败')
         setUploading(false)
         return
       }
@@ -173,13 +212,13 @@ export default function PublishForm() {
     setSuccess('')
 
     if (!title || !price) {
-      setError('请填写书名和价格')
+      showToast('error', '请填写书名和价格')
       setLoading(false)
       return
     }
 
     if (!wechat && !phone) {
-      setError('请至少填写微信号或联系电话')
+      showToast('error', '请至少填写微信号或联系电话')
       setLoading(false)
       return
     }
@@ -202,31 +241,21 @@ export default function PublishForm() {
     })
 
     if (insertError) {
-      setError('发布失败：' + insertError.message)
+      showToast('error', '发布失败：' + insertError.message)
       setLoading(false)
       return
     }
 
-    setSuccess('发布成功！')
+    showToast('success', '发布成功！')
     setTimeout(() => {
       router.push('/')
       router.refresh()
-    }, 1500)
+    }, 2000)
   }
 
   return (
     <div className="p-4 pb-20">
-      {error && (
-        <div className="mb-4 p-3 rounded-xl text-center text-sm" style={{background: '#FFF0F0', color: '#ee0a24'}}>
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="mb-4 p-3 rounded-xl text-center text-sm" style={{background: '#e8f8f0', color: '#27ae60'}}>
-          {success}
-        </div>
-      )}
+      <Toast {...toast} />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 商品类型 */}
@@ -260,13 +289,12 @@ export default function PublishForm() {
           </div>
         </div>
 
-        {/* 商品图片 - 轮播显示 */}
+        {/* 商品图片 */}
         <div className="rounded-2xl p-4" style={{background: '#fff'}}>
           <h3 className="font-bold mb-3" style={{color: '#333'}}>商品图片（{images.length}/5）</h3>
           
           {images.length > 0 ? (
             <div>
-              {/* 轮播区域 */}
               <div className="relative mb-3">
                 <div className="w-full h-64 rounded-xl overflow-hidden" style={{background: '#f5f5f5'}}>
                   <img 
@@ -275,7 +303,6 @@ export default function PublishForm() {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                {/* 删除按钮 */}
                 <button
                   type="button"
                   onClick={() => removeImage(currentImageIndex)}
@@ -284,13 +311,11 @@ export default function PublishForm() {
                 >
                   ✕
                 </button>
-                {/* 图片计数 */}
                 <div className="absolute bottom-2 right-2 px-3 py-1 rounded-full text-xs" style={{background: 'rgba(0,0,0,0.5)', color: '#fff'}}>
                   {currentImageIndex + 1}/{images.length}
                 </div>
               </div>
 
-              {/* 缩略图列表 */}
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {images.map((img, index) => (
                   <div 
@@ -303,12 +328,8 @@ export default function PublishForm() {
                     }}
                   >
                     <img src={img} alt="" className="w-16 h-16 rounded-lg object-cover" />
-                    {index === currentImageIndex && (
-                      <div className="absolute inset-0 border-2 rounded-lg" style={{borderColor: '#ffa06f'}} />
-                    )}
                   </div>
                 ))}
-                {/* 添加图片按钮 */}
                 {images.length < 5 && (
                   <label className="flex-shrink-0 w-16 h-16 rounded-lg flex flex-col items-center justify-center cursor-pointer" style={{border: '2px dashed #E0D5C8'}}>
                     <span className="text-xl" style={{color: '#999'}}>+</span>
@@ -408,6 +429,20 @@ export default function PublishForm() {
             <div>
               <div className="text-sm mb-2" style={{color: '#333'}}>适用专业（可多选）</div>
               <div className="max-h-60 overflow-y-auto">
+                {/* 全专业通用选项 - 放在第一位 */}
+                <div className="mb-3">
+                  <div
+                    onClick={() => toggleMajor('全专业通用')}
+                    className="px-3 py-1.5 rounded-full text-sm cursor-pointer inline-block"
+                    style={{
+                      background: selectedMajors.includes('全专业通用') ? '#F5E6D0' : '#f0f2f5',
+                      color: selectedMajors.includes('全专业通用') ? '#fff' : '#636e72',
+                      border: `1px solid ${selectedMajors.includes('全专业通用') ? '#F5E6D0' : '#e0e0e0'}`
+                    }}
+                  >
+                    全专业通用
+                  </div>
+                </div>
                 {majorCategories.map(category => (
                   <div key={category.name} className="mb-3">
                     <div className="text-xs font-semibold mb-1" style={{color: '#999'}}>{category.name}</div>
