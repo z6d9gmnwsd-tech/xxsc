@@ -80,24 +80,20 @@ export default function DetailContent() {
   const loadData = async (bookId: string) => {
     setLoading(true)
     try {
-      const tasks: Promise<any>[] = [
-        supabase.from('books').select('*').eq('id', bookId).single(),
-      ]
-      if (user) {
-        tasks.push(
-          supabase
+      const bookResult = await supabase
+        .from('books')
+        .select('*')
+        .eq('id', bookId)
+        .single()
+
+      const favResult = user
+        ? await supabase
             .from('favorites')
             .select('id')
             .eq('user_id', user.id)
             .eq('book_id', bookId)
             .single()
-        )
-      }
-
-      const results = await Promise.all(tasks)
-
-      const bookResult = results[0]
-      const favResult = user ? results[1] : null
+        : null
 
       if (bookResult.error) {
         console.error('Error loading book:', bookResult.error)
