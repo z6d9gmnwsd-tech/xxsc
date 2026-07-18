@@ -26,6 +26,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  const [realQuestion1, setRealQuestion1] = useState('')
+  const [realQuestion2, setRealQuestion2] = useState('')
+  const [verifyAnswer1, setVerifyAnswer1] = useState('')
+  const [verifyAnswer2, setVerifyAnswer2] = useState('')
+
   const fixedQuestions = [
     '你的学号是多少？',
     '你的学校名称是什么？',
@@ -43,6 +48,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setSecurityQuestion2('')
     setCustomQuestion2('')
     setSecurityAnswer2('')
+    setRealQuestion1('')
+    setRealQuestion2('')
+    setVerifyAnswer1('')
+    setVerifyAnswer2('')
     setError('')
     setSuccess('')
   }
@@ -144,30 +153,61 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     }
   }
 
-  const handleVerifyAnswer = async () => {
-    if (!phone || !securityAnswer1) {
-      setError('请输入手机号和密保答案')
+  const handleFetchQuestions = async () => {
+    if (!phone) {
+      setError('请输入手机号')
       return
     }
 
     setLoading(true)
     setError('')
 
-    const { data: data1 } = await supabase.rpc('verify_security_answer', {
-      p_phone: phone,
-      p_answer: securityAnswer1
+    const { data, error: funcError } = await supabase.rpc('get_security_questions', {
+      p_phone: phone
     })
 
-    if (data1 && data1.success) {
-      setLoading(false)
-      setStep('reset')
+    setLoading(false)
+
+    if (funcError) {
+      setError('获取密保问题失败：' + funcError.message)
       return
     }
 
-    if (securityAnswer2) {
+    if (data && data.success) {
+      setRealQuestion1(data.question1 || '')
+      setRealQuestion2(data.question2 || '')
+      setStep('verify')
+    } else {
+      setError(data?.message || '获取密保问题失败')
+    }
+  }
+
+  const handleVerifyAnswer = async () => {
+    if (!verifyAnswer1 && !verifyAnswer2) {
+      setError('请至少输入一个密保答案')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    if (verifyAnswer1) {
+      const { data: data1 } = await supabase.rpc('verify_security_answer', {
+        p_phone: phone,
+        p_answer: verifyAnswer1
+      })
+
+      if (data1 && data1.success) {
+        setLoading(false)
+        setStep('reset')
+        return
+      }
+    }
+
+    if (verifyAnswer2) {
       const { data: data2 } = await supabase.rpc('verify_security_answer', {
         p_phone: phone,
-        p_answer: securityAnswer2
+        p_answer: verifyAnswer2
       })
 
       setLoading(false)
@@ -179,7 +219,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       }
     } else {
       setLoading(false)
-      setError(data1?.message || '密保答案错误')
+      setError('密保答案错误')
     }
   }
 
@@ -326,7 +366,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 <label className="block text-sm mb-2" style={{color: '#666'}}>手机号</label>
                 <input type="tel" className="input" placeholder="请输入手机号" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
-              <button onClick={() => { if (phone) setStep('verify'); else setError('请输入手机号'); }} className="btn-primary w-full">下一步</button>
+              <button onClick={handleFetchQuestions} disabled={loading} className="btn-primary w-full disabled:opacity-50">
+                {loading ? '查询中...' : '下一步'}
+              </button>
               <button onClick={() => { resetForm(); setStep('login') }} className="w-full text-center text-sm text-gray-500 hover:underline">返回登录</button>
             </div>
           )}
@@ -334,10 +376,41 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           {step === 'verify' && (
             <div className="space-y-4">
               <p className="text-sm" style={{color: '#666'}}>请回答您的密保问题（回答任意一个即可）</p>
-              <div>
-                <label className="block text-sm mb-2" style={{color: '#666'}}>密保答案</label>
-                <input type="text" className="input" placeholder="请输入密保答案" value={securityAnswer1} onChange={(e) => setSecurityAnswer1(e.target.value)} />
-              </div>
+
+              {realQuestion1 && (
+                <div className="p-3 rounded-xl" style={{background: '#FFF8E1', border: '1px solid #FFE082'}}>
+                  <div className="text-xs mb-1" style={{color: '#F57C00'}}>密保问题 1</div>
+                  <div className="text-sm font-medium" style={{color: '#333'}}>{realQuestion1}</div>
+                </div>
+              )}
+
+              {realQuestion2 && (
+                <div className="p-3 rounded-xl" style={{background: '#FFF8E1', border: '1px solid #FFE082'}}>
+                  <div className="text-xs mb-1" style={{color: '#F57C00'}}>密保问题 2</div>
+                  <div className="text-sm font-medium" style={{color: '#333'}}>{realQuestion2}</div>
+                </div>
+              )}
+
+              {!realQuestion1 && !realQuestion2 && (
+                <div className="p-3 rounded-xl text-center" style={{background: '#f5f5f5', color: '#999'}}>
+                  未找到密保问题，请联系管理员
+                </div>
+              )}
+
+              {realQuestion1 && (
+                <div>
+                  <label className="block text-sm mb-2" style={{color: '#666'}}>密保问题1 的答案</label>
+                  <input type="text" className="input" placeholder={`请回答：${realQuestion1}`} value={verifyAnswer1} onChange={(e) => setVerifyAnswer1(e.target.value)} />
+                </div>
+              )}
+
+              {realQuestion2 && (
+                <div>
+                  <label className="block text-sm mb-2" style={{color: '#666'}}>密保问题2 的答案</label>
+                  <input type="text" className="input" placeholder={`请回答：${realQuestion2}`} value={verifyAnswer2} onChange={(e) => setVerifyAnswer2(e.target.value)} />
+                </div>
+              )}
+
               <button onClick={handleVerifyAnswer} disabled={loading} className="btn-primary w-full disabled:opacity-50">
                 {loading ? '验证中...' : '验证'}
               </button>
