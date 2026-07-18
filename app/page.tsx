@@ -5,6 +5,7 @@ import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import BookList from './BookList'
 import BottomNav from '@/components/BottomNav'
 import AuthModal from '@/components/AuthModal'
+import { Search, ArrowRightLeft, BookOpen } from 'lucide-react'
 
 export default function HomePage() {
   const { user, loading } = usePhoneAuth()
@@ -31,49 +32,53 @@ export default function HomePage() {
   }
 
   return (
-    <div>
-      <div className="px-4 py-6 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
+    <div className="animate-fade-in">
+      <div className="header-glass px-4 py-5 text-white">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{background: 'rgba(255,255,255,0.2)'}}>
-            <span className="text-2xl">📚</span>
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{background: 'rgba(255,255,255,0.2)'}}>
+            <BookOpen size={20} />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold tracking-wide">新校书仓</h1>
-            <p className="text-sm" style={{opacity: 0.8}}>校园二手教材交易平台</p>
+            <h1 className="text-xl font-bold tracking-wide">新校书仓</h1>
+            <p className="text-xs" style={{opacity: 0.7}}>校园二手教材交易平台</p>
           </div>
         </div>
       </div>
 
       <div className="px-4 py-3" style={{background: '#fff'}}>
         <div className="flex gap-2">
-          <input
-            className="input flex-1"
-            placeholder="搜索书名、ISBN、资料名"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && setSearchQuery((e.target as HTMLInputElement).value)}
-          />
-          <button className="btn-primary px-4" onClick={() => setSearchQuery(searchQuery)}>搜索</button>
+          <div className="flex-1 relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{color: '#bbb'}} />
+            <input
+              className="input pl-9"
+              style={{paddingTop: '10px', paddingBottom: '10px'}}
+              placeholder="搜索书名、ISBN、资料名"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && setSearchQuery((e.target as HTMLInputElement).value)}
+            />
+          </div>
+          <button className="btn-primary px-5" onClick={() => setSearchQuery(searchQuery)}>搜索</button>
         </div>
       </div>
 
-      <div className="flex gap-3 px-4 py-3">
-        <div onClick={() => handleAction('want')} className="flex-1 flex items-center gap-3 p-4 rounded-2xl cursor-pointer" style={{background: 'linear-gradient(135deg, #FBF8F3, #F5E6D0)', border: '1px solid #E0C9A8'}}>
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style={{background: 'linear-gradient(135deg, #F5E6D0, #E0C9A8)'}}>
-            <span className="text-xl">🔍</span>
+      <div className="flex gap-3 px-4 py-4">
+        <div onClick={() => handleAction('want')} className="flex-1 flex items-center gap-3 p-4 rounded-2xl cursor-pointer card-interactive" style={{background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(224,213,200,0.5)'}}>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{background: 'linear-gradient(135deg, #F5E6D0, #E0C9A8)'}}>
+            <ArrowRightLeft size={18} style={{color: '#8B6914'}} />
           </div>
           <div>
-            <div className="font-semibold" style={{color: '#2d3436'}}>求购广场</div>
-            <div className="text-xs" style={{color: '#b2bec3'}}>发布你的需求</div>
+            <div className="text-sm font-semibold" style={{color: '#1a1a1a'}}>求购广场</div>
+            <div className="text-[11px]" style={{color: '#999'}}>发布你的需求</div>
           </div>
         </div>
-        <div onClick={() => handleAction('publish')} className="flex-1 flex items-center gap-3 p-4 rounded-2xl cursor-pointer" style={{background: 'linear-gradient(135deg, #FBF8F3, #F5E6D0)', border: '1px solid #E0C9A8'}}>
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg" style={{background: 'linear-gradient(135deg, #ffa06f, #E5D5BF)'}}>
-            <span className="text-xl">📖</span>
+        <div onClick={() => handleAction('publish')} className="flex-1 flex items-center gap-3 p-4 rounded-2xl cursor-pointer card-interactive" style={{background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(224,213,200,0.5)'}}>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ffa06f, #E5D5BF)'}}>
+            <BookOpen size={18} style={{color: '#fff'}} />
           </div>
           <div>
-            <div className="font-semibold" style={{color: '#2d3436'}}>卖书</div>
-            <div className="text-xs" style={{color: '#b2bec3'}}>一键发布闲置</div>
+            <div className="text-sm font-semibold" style={{color: '#1a1a1a'}}>卖书</div>
+            <div className="text-[11px]" style={{color: '#999'}}>一键发布闲置</div>
           </div>
         </div>
       </div>
@@ -81,59 +86,39 @@ export default function HomePage() {
       <div className="flex items-center gap-2 px-4 py-3 mb-2" style={{background: '#fff'}}>
         <button
           onClick={() => setShowFilter(!showFilter)}
-          className="flex items-center gap-1 px-3 py-2 rounded-full text-sm"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
           style={{
-            background: filterCategory ? '#F5E6D0' : '#f0f2f5',
-            color: filterCategory ? '#fff' : '#636e72',
-            border: `1px solid ${filterCategory ? '#F5E6D0' : '#e0e0e0'}`
+            background: filterCategory ? 'linear-gradient(135deg, #F5E6D0, #E0C9A8)' : '#f5f5f5',
+            color: filterCategory ? '#fff' : '#666',
           }}
         >
-          <span>🔍</span> 筛选
+          <Search size={12} /> 筛选
         </button>
-        <button
-          onClick={() => setSortBy('price_asc')}
-          className="px-3 py-2 rounded-full text-sm"
-          style={{
-            background: sortBy === 'price_asc' ? '#F5E6D0' : '#f0f2f5',
-            color: sortBy === 'price_asc' ? '#fff' : '#636e72',
-            border: `1px solid ${sortBy === 'price_asc' ? '#F5E6D0' : '#e0e0e0'}`
-          }}
-        >
-          价格↑
-        </button>
-        <button
-          onClick={() => setSortBy('price_desc')}
-          className="px-3 py-2 rounded-full text-sm"
-          style={{
-            background: sortBy === 'price_desc' ? '#F5E6D0' : '#f0f2f5',
-            color: sortBy === 'price_desc' ? '#fff' : '#636e72',
-            border: `1px solid ${sortBy === 'price_desc' ? '#F5E6D0' : '#e0e0e0'}`
-          }}
-        >
-          价格↓
-        </button>
-        {sortBy !== 'newest' && (
+        {['price_asc', 'price_desc', 'newest'].map((s) => (
           <button
-            onClick={() => setSortBy('newest')}
-            className="px-3 py-2 rounded-full text-sm"
-            style={{background: '#f0f2f5', color: '#636e72', border: '1px solid #e0e0e0'}}
+            key={s}
+            onClick={() => setSortBy(s as any)}
+            className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
+            style={{
+              background: sortBy === s ? 'linear-gradient(135deg, #F5E6D0, #E0C9A8)' : '#f5f5f5',
+              color: sortBy === s ? '#fff' : '#666',
+            }}
           >
-            最新
+            {s === 'price_asc' ? '价格↑' : s === 'price_desc' ? '价格↓' : '最新'}
           </button>
-        )}
+        ))}
       </div>
 
       {showFilter && (
-        <div className="px-4 py-3 border-b" style={{background: '#fff', borderColor: '#f0f0f0'}}>
-          <div className="text-xs mb-2" style={{color: '#999'}}>选择分类</div>
+        <div className="px-4 py-3 border-b animate-slide-down" style={{background: '#fff', borderColor: '#f0f0f0'}}>
+          <div className="text-[11px] mb-2 font-medium" style={{color: '#999'}}>选择分类</div>
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setFilterCategory('')}
-              className="px-3 py-1.5 rounded-full text-xs"
+              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
               style={{
-                background: !filterCategory ? '#F5E6D0' : '#f0f2f5',
-                color: !filterCategory ? '#fff' : '#636e72',
-                border: `1px solid ${!filterCategory ? '#F5E6D0' : '#e0e0e0'}`
+                background: !filterCategory ? 'linear-gradient(135deg, #F5E6D0, #E0C9A8)' : '#f5f5f5',
+                color: !filterCategory ? '#fff' : '#666',
               }}
             >
               全部
@@ -142,11 +127,10 @@ export default function HomePage() {
               <button
                 key={cat}
                 onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)}
-                className="px-3 py-1.5 rounded-full text-xs"
+                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
                 style={{
-                  background: filterCategory === cat ? '#F5E6D0' : '#f0f2f5',
-                  color: filterCategory === cat ? '#fff' : '#636e72',
-                  border: `1px solid ${filterCategory === cat ? '#F5E6D0' : '#e0e0e0'}`
+                  background: filterCategory === cat ? 'linear-gradient(135deg, #F5E6D0, #E0C9A8)' : '#f5f5f5',
+                  color: filterCategory === cat ? '#fff' : '#666',
                 }}
               >
                 {cat}
@@ -161,7 +145,7 @@ export default function HomePage() {
       </div>
 
       <BottomNav activePage="home" />
-      
+
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
