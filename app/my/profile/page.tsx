@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import { useRouter } from 'next/navigation'
 import BackButton from '@/components/BackButton'
+import BottomNav from '@/components/BottomNav'
 import { User, Save, Loader2, X } from 'lucide-react'
 
 interface Profile {
@@ -105,6 +106,7 @@ export default function EditProfilePage() {
           </div>
         </div>
         <ProfileSkeleton />
+        <BottomNav activeTab="profile" />
       </div>
     )
   }
@@ -236,6 +238,8 @@ export default function EditProfilePage() {
           )}
         </button>
       </div>
+
+      <BottomNav activeTab="profile" />
     </div>
   )
 }
