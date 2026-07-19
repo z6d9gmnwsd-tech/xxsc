@@ -60,7 +60,7 @@ export default function PublishPage() {
 
       <PublishForm />
 
-      <BottomNav activePage="publish" />
+      <BottomNav activeTab="publish" />
     </div>
   );
 }
