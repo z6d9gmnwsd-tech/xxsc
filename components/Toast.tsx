@@ -1,24 +1,51 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { ToastProps } from '@/types'
+
+let showToastFn: ((type: ToastProps['type'], message: string) => void) | null = null
+
+export function showToast(type: ToastProps['type'], message: string) {
+  if (showToastFn) {
+    showToastFn(type, message)
+  }
+}
 
 export default function Toast({ show, type, message }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false)
+  const [toastType, setToastType] = useState<ToastProps['type']>('info')
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastShow, setToastShow] = useState(false)
+
+  const handleShowToast = useCallback((t: ToastProps['type'], msg: string) => {
+    setToastType(t)
+    setToastMessage(msg)
+    setToastShow(true)
+    setTimeout(() => setToastShow(false), 2500)
+  }, [])
 
   useEffect(() => {
-    if (show) {
+    showToastFn = handleShowToast
+    return () => { showToastFn = null }
+  }, [handleShowToast])
+
+  useEffect(() => {
+    if (toastShow) {
       setIsVisible(true)
     } else {
       const timer = setTimeout(() => setIsVisible(false), 300)
       return () => clearTimeout(timer)
     }
-  }, [show])
+  }, [toastShow])
 
-  if (!isVisible) return null
+  const displayShow = show !== undefined ? show : toastShow
+  const displayType = type || toastType
+  const displayMessage = message || toastMessage
+
+  if (!isVisible && !displayShow) return null
 
   const getIcon = () => {
-    switch (type) {
+    switch (displayType) {
       case 'success':
         return (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -44,25 +71,13 @@ export default function Toast({ show, type, message }: ToastProps) {
   }
 
   const getStyles = () => {
-    switch (type) {
+    switch (displayType) {
       case 'success':
-        return {
-          bg: '#ECFDF5',
-          border: '#A7F3D0',
-          text: '#15803D',
-        }
+        return { bg: '#ECFDF5', border: '#A7F3D0', text: '#15803D' }
       case 'error':
-        return {
-          bg: '#FEF2F2',
-          border: '#FECACA',
-          text: '#B91C1C',
-        }
+        return { bg: '#FEF2F2', border: '#FECACA', text: '#B91C1C' }
       case 'info':
-        return {
-          bg: '#EFF6FF',
-          border: '#BFDBFE',
-          text: '#1D4ED8',
-        }
+        return { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' }
     }
   }
 
@@ -77,13 +92,13 @@ export default function Toast({ show, type, message }: ToastProps) {
         borderColor: styles?.border,
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
         transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        opacity: show ? 1 : 0,
-        transform: `translateX(-50%) translateY(${show ? '0' : '-8px'}) scale(${show ? '1' : '0.95'})`,
+        opacity: displayShow ? 1 : 0,
+        transform: `translateX(-50%) translateY(${displayShow ? '0' : '-8px'}) scale(${displayShow ? '1' : '0.95'})`,
       }}
     >
       <div className="flex-shrink-0">{getIcon()}</div>
       <span className="text-sm font-medium" style={{ color: styles?.text }}>
-        {message}
+        {displayMessage}
       </span>
     </div>
   )
