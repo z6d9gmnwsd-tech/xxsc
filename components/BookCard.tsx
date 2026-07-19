@@ -30,7 +30,6 @@ export default function BookCard({ book, index = 0 }: BookCardProps) {
       onMouseUp={() => setIsPressed(false)}
       onMouseLeave={() => setIsPressed(false)}
     >
-      {/* 图片区域 */}
       <div className="relative flex-shrink-0">
         {book.image_url ? (
           <>
@@ -54,9 +53,8 @@ export default function BookCard({ book, index = 0 }: BookCardProps) {
             <span className="text-5xl opacity-60">📚</span>
           </div>
         )}
-        {/* 成色标签 */}
         <div
-          className={`absolute top-2 left-2 text-white text-xs px-2 py-0.5 rounded-md font-medium`}
+          className="absolute top-2 left-2 text-white text-xs px-2 py-0.5 rounded-md font-medium"
           style={{
             fontSize: '0.625rem',
             backgroundColor: getConditionColorRaw(book.condition),
@@ -67,7 +65,6 @@ export default function BookCard({ book, index = 0 }: BookCardProps) {
         </div>
       </div>
 
-      {/* 信息区域 */}
       <div className="flex-1 p-3.5 flex flex-col justify-between min-w-0">
         <div>
           <h3
@@ -80,12 +77,6 @@ export default function BookCard({ book, index = 0 }: BookCardProps) {
             <span className={`tag ${getCategoryTag(book.category)}`}>
               {book.category}
             </span>
-            {book.grade && (
-              <span className="tag tag-info">{book.grade}</span>
-            )}
-            {book.subject && (
-              <span className="tag tag-success">{book.subject}</span>
-            )}
           </div>
         </div>
 
@@ -116,7 +107,6 @@ export default function BookCard({ book, index = 0 }: BookCardProps) {
   )
 }
 
-// 辅助函数：获取成色的原始颜色值
 function getConditionColorRaw(condition: string): string {
   switch (condition) {
     case '全新': return '#3B82F6'
