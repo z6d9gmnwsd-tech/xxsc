@@ -9,7 +9,6 @@ import {
   Heart,
   MoreHorizontal,
   Share2,
-  MessageCircle,
   Phone,
   Copy,
   Check,
@@ -18,12 +17,12 @@ import {
   Trash2,
   Archive,
   AlertCircle,
-  BookOpen,
   Tag,
   Clock,
   User,
 } from 'lucide-react';
 import { SkeletonCard } from '../../components/LoadingSpinner';
+import Disclaimer from '../../components/Disclaimer';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -227,169 +226,83 @@ export default function DetailContent({ bookId }: DetailContentProps) {
           50% { transform: scale(1.3); }
           100% { transform: scale(1); }
         }
-        .heart-btn {
-          transition: transform 0.15s ease;
-        }
-        .heart-btn:active {
-          transform: scale(0.9);
-        }
-        .heart-anim {
-          animation: heartPop 0.3s ease-out;
-        }
+        .heart-btn { transition: transform 0.15s ease; }
+        .heart-btn:active { transform: scale(0.9); }
+        .heart-anim { animation: heartPop 0.3s ease-out; }
         .glass-fab {
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
+          width: 56px; height: 56px; border-radius: 50%;
           background: rgba(255,255,255,0.9);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
           border: 1px solid rgba(0,0,0,0.06);
           box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: transform 0.15s ease;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: transform 0.15s ease;
         }
-        .glass-fab:active {
-          transform: scale(0.9);
-        }
+        .glass-fab:active { transform: scale(0.9); }
         .detail-card {
           background: rgba(255,255,255,0.85);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border-radius: 16px;
-          border: 1px solid rgba(0,0,0,0.04);
-          padding: 16px;
-          margin: 0 16px 12px;
+          backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+          border-radius: 16px; border: 1px solid rgba(0,0,0,0.04);
+          padding: 16px; margin: 0 16px 12px;
         }
         .more-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.3);
-          z-index: 200;
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-          padding-bottom: 40px;
+          position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200;
+          display: flex; align-items: flex-end; justify-content: center; padding-bottom: 40px;
         }
         .more-sheet {
-          background: #fff;
-          border-radius: 20px 20px 0 0;
-          padding: 8px 0;
-          width: 100%;
-          max-width: 400px;
-          animation: sheetUp 0.25s ease-out;
+          background: #fff; border-radius: 20px 20px 0 0; padding: 8px 0;
+          width: 100%; max-width: 400px; animation: sheetUp 0.25s ease-out;
         }
-        @keyframes sheetUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
+        @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .more-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px 20px;
-          font-size: 15px;
-          color: #1a1a1a;
-          cursor: pointer;
-          transition: background 0.15s;
+          display: flex; align-items: center; gap: 12px;
+          padding: 14px 20px; font-size: 15px; color: #1a1a1a;
+          cursor: pointer; transition: background 0.15s;
         }
-        .more-item:active {
-          background: #f5f5f5;
-        }
-        .more-item.danger {
-          color: #E8590C;
-        }
+        .more-item:active { background: #f5f5f5; }
+        .more-item.danger { color: #E8590C; }
         .image-viewer {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 4/3;
-          background: #000;
-          border-radius: 0;
-          overflow: hidden;
+          position: relative; width: 100%; aspect-ratio: 4/3;
+          background: #000; border-radius: 0; overflow: hidden;
         }
         .image-nav {
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background: rgba(255,255,255,0.8);
-          backdrop-filter: blur(8px);
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          z-index: 10;
+          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 36px; height: 36px; border-radius: 50%;
+          background: rgba(255,255,255,0.8); backdrop-filter: blur(8px);
+          border: none; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; z-index: 10;
         }
         .image-counter {
-          position: absolute;
-          bottom: 12px;
-          right: 12px;
-          padding: 4px 10px;
-          border-radius: 12px;
-          background: rgba(0,0,0,0.5);
-          color: #fff;
-          font-size: 12px;
-          z-index: 10;
+          position: absolute; bottom: 12px; right: 12px;
+          padding: 4px 10px; border-radius: 12px;
+          background: rgba(0,0,0,0.5); color: #fff; font-size: 12px; z-index: 10;
         }
       `}</style>
 
       {/* Header */}
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '12px 16px',
-          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
-          background: 'linear-gradient(135deg, #5B8C5A, #4a7a49)',
-        }}
-      >
-        <button
-          onClick={() => router.back()}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.2)',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '12px 16px',
+        paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+        background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)',
+      }}>
+        <button onClick={() => router.back()} style={{
+          width: 36, height: 36, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.2)', border: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', flexShrink: 0,
+        }}>
           <ChevronLeft size={20} color="#fff" />
         </button>
         <span style={{ fontSize: 17, fontWeight: 600, color: '#fff', flex: 1 }}>
           {book.title}
         </span>
-        <button
-          onClick={() => {
-            if (navigator.share) {
-              navigator.share({ title: book.title, url: window.location.href });
-            }
-          }}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.2)',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={() => { if (navigator.share) navigator.share({ title: book.title, url: window.location.href }); }} style={{
+          width: 36, height: 36, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.2)', border: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        }}>
           <Share2 size={18} color="#fff" />
         </button>
       </header>
@@ -397,34 +310,20 @@ export default function DetailContent({ bookId }: DetailContentProps) {
       {/* Image Viewer */}
       {allImages.length > 0 && (
         <div className="image-viewer">
-          <img
-            src={allImages[currentImageIndex]}
-            alt={book.title}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
+          <img src={allImages[currentImageIndex]} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           {allImages.length > 1 && (
             <>
               {currentImageIndex > 0 && (
-                <button
-                  className="image-nav"
-                  style={{ left: 12 }}
-                  onClick={() => setCurrentImageIndex(i => i - 1)}
-                >
+                <button className="image-nav" style={{ left: 12 }} onClick={() => setCurrentImageIndex(i => i - 1)}>
                   <ChevronLeft size={18} color="#333" />
                 </button>
               )}
               {currentImageIndex < allImages.length - 1 && (
-                <button
-                  className="image-nav"
-                  style={{ right: 12 }}
-                  onClick={() => setCurrentImageIndex(i => i + 1)}
-                >
+                <button className="image-nav" style={{ right: 12 }} onClick={() => setCurrentImageIndex(i => i + 1)}>
                   <ChevronRight size={18} color="#333" />
                 </button>
               )}
-              <div className="image-counter">
-                {currentImageIndex + 1}/{allImages.length}
-              </div>
+              <div className="image-counter">{currentImageIndex + 1}/{allImages.length}</div>
             </>
           )}
         </div>
@@ -437,30 +336,12 @@ export default function DetailContent({ bookId }: DetailContentProps) {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {book.category && (
-            <span
-              style={{
-                fontSize: 12,
-                padding: '4px 10px',
-                borderRadius: 12,
-                background: '#5B8C5A',
-                color: '#fff',
-                fontWeight: 500,
-              }}
-            >
+            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, background: 'rgba(245,230,208,0.6)', color: '#8B6914', fontWeight: 500 }}>
               {book.category}
             </span>
           )}
           {book.condition && condStyle && (
-            <span
-              style={{
-                fontSize: 12,
-                padding: '4px 10px',
-                borderRadius: 12,
-                background: condStyle.bg,
-                color: condStyle.text,
-                fontWeight: 500,
-              }}
-            >
+            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, background: condStyle.bg, color: condStyle.text, fontWeight: 500 }}>
               {book.condition}
             </span>
           )}
@@ -469,20 +350,15 @@ export default function DetailContent({ bookId }: DetailContentProps) {
 
       {/* Title */}
       <div className="detail-card">
-        <div style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.4 }}>
-          {book.title}
-        </div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.4 }}>{book.title}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#999' }}>
-          <Clock size={12} />
-          <span>{timeAgo(book.created_at)}</span>
+          <Clock size={12} /><span>{timeAgo(book.created_at)}</span>
         </div>
       </div>
 
       {/* Book Info */}
       <div className="detail-card">
-        <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>
-          商品详情
-        </div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>商品详情</div>
         {book.isbn && (
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
             <span style={{ fontSize: 14, color: '#999' }}>ISBN</span>
@@ -506,9 +382,7 @@ export default function DetailContent({ bookId }: DetailContentProps) {
             <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>适用年级</span>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
               {book.grades.map((g: string) => (
-                <span key={g} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#f0f2f5', color: '#666' }}>
-                  {g}
-                </span>
+                <span key={g} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#f0f2f5', color: '#666' }}>{g}</span>
               ))}
             </div>
           </div>
@@ -518,9 +392,7 @@ export default function DetailContent({ bookId }: DetailContentProps) {
             <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>适用专业</span>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
               {book.majors.map((m: string) => (
-                <span key={m} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#F5E6D0', color: '#8B6914' }}>
-                  {m}
-                </span>
+                <span key={m} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#F5E6D0', color: '#8B6914' }}>{m}</span>
               ))}
             </div>
           </div>
@@ -542,9 +414,7 @@ export default function DetailContent({ bookId }: DetailContentProps) {
             <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>考试科目</span>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
               {book.exam_subjects.map((s: string) => (
-                <span key={s} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#f0f2f5', color: '#666' }}>
-                  {s}
-                </span>
+                <span key={s} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#f0f2f5', color: '#666' }}>{s}</span>
               ))}
             </div>
           </div>
@@ -554,77 +424,40 @@ export default function DetailContent({ bookId }: DetailContentProps) {
       {/* Seller Card */}
       {seller && (
         <div className="detail-card">
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>
-            卖家信息
-          </div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>卖家信息</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: '50%',
-                background: '#f0f2f5',
-                overflow: 'hidden',
-                flexShrink: 0,
-              }}
-            >
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5E6D0, #E0C9A8)', overflow: 'hidden', flexShrink: 0 }}>
               {seller.avatar_url ? (
                 <img src={seller.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <User size={20} color="#ccc" />
+                  <User size={20} color="#8B6914" />
                 </div>
               )}
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>
-                {seller.nickname || '匿名用户'}
-              </div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>{seller.nickname || '匿名用户'}</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {seller.wechat && (
-              <button
-                onClick={() => handleCopy(seller.wechat!, 'wechat')}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  padding: '10px 0',
-                  borderRadius: 12,
-                  border: '1px solid rgba(91,140,90,0.2)',
-                  background: 'rgba(91,140,90,0.05)',
-                  color: '#5B8C5A',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
+              <button onClick={() => handleCopy(seller.wechat!, 'wechat')} style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '10px 0', borderRadius: 12,
+                border: '1px solid rgba(139,105,20,0.15)', background: 'rgba(245,230,208,0.3)',
+                color: '#8B6914', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+              }}>
                 {copiedField === 'wechat' ? <Check size={14} /> : <Copy size={14} />}
                 {copiedField === 'wechat' ? '已复制' : '复制微信'}
               </button>
             )}
             {seller.phone && (
-              <button
-                onClick={() => handleCopy(seller.phone!, 'phone')}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  padding: '10px 0',
-                  borderRadius: 12,
-                  border: '1px solid rgba(91,140,90,0.2)',
-                  background: 'rgba(91,140,90,0.05)',
-                  color: '#5B8C5A',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
+              <button onClick={() => handleCopy(seller.phone!, 'phone')} style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '10px 0', borderRadius: 12,
+                border: '1px solid rgba(139,105,20,0.15)', background: 'rgba(245,230,208,0.3)',
+                color: '#8B6914', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+              }}>
                 {copiedField === 'phone' ? <Check size={14} /> : <Phone size={14} />}
                 {copiedField === 'phone' ? '已复制' : '复制手机号'}
               </button>
@@ -633,42 +466,20 @@ export default function DetailContent({ bookId }: DetailContentProps) {
         </div>
       )}
 
+      {/* Disclaimer */}
+      <Disclaimer variant="detail" />
+
       {/* Floating Favorite Button */}
-      <div
-        style={{
-          position: 'fixed',
-          left: 16,
-          bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
-          zIndex: 150,
-        }}
-      >
-        <button
-          className={`glass-fab heart-btn ${heartAnimating ? 'heart-anim' : ''}`}
-          onClick={toggleFavorite}
-        >
-          <Heart
-            size={24}
-            color={isFavorited ? '#E8590C' : '#999'}
-            fill={isFavorited ? '#E8590C' : 'none'}
-            strokeWidth={isFavorited ? 0 : 1.5}
-          />
+      <div style={{ position: 'fixed', left: 16, bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', zIndex: 150 }}>
+        <button className={`glass-fab heart-btn ${heartAnimating ? 'heart-anim' : ''}`} onClick={toggleFavorite}>
+          <Heart size={24} color={isFavorited ? '#E8590C' : '#999'} fill={isFavorited ? '#E8590C' : 'none'} strokeWidth={isFavorited ? 0 : 1.5} />
         </button>
       </div>
 
       {/* Owner Floating Button */}
       {isOwner && (
-        <div
-          style={{
-            position: 'fixed',
-            right: 16,
-            bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
-            zIndex: 150,
-          }}
-        >
-          <button
-            className="glass-fab"
-            onClick={() => setShowMoreMenu(true)}
-          >
+        <div style={{ position: 'fixed', right: 16, bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', zIndex: 150 }}>
+          <button className="glass-fab" onClick={() => setShowMoreMenu(true)}>
             <MoreHorizontal size={22} color="#666" />
           </button>
         </div>
@@ -680,34 +491,23 @@ export default function DetailContent({ bookId }: DetailContentProps) {
           <div className="more-sheet" onClick={e => e.stopPropagation()}>
             {isOwner && (
               <>
-                <div
-                  className="more-item"
-                  onClick={() => {
-                    setShowMoreMenu(false);
-                    router.push(`/publish?edit=${bookId}`);
-                  }}
-                >
-                  <Edit3 size={18} color="#5B8C5A" />
-                  编辑
+                <div className="more-item" onClick={() => { setShowMoreMenu(false); router.push(`/publish?edit=${bookId}`); }}>
+                  <Edit3 size={18} color="#8B6914" /> 编辑
                 </div>
                 <div className="more-item" onClick={handleMarkSold}>
-                  <Tag size={18} color="#5B8C5A" />
-                  标记已售出
+                  <Tag size={18} color="#8B6914" /> 标记已售出
                 </div>
                 <div className="more-item" onClick={handleDelist}>
-                  <Archive size={18} color="#666" />
-                  下架
+                  <Archive size={18} color="#666" /> 下架
                 </div>
                 <div className="more-item danger" onClick={handleDelete}>
-                  <Trash2 size={18} color="#E8590C" />
-                  删除
+                  <Trash2 size={18} color="#E8590C" /> 删除
                 </div>
               </>
             )}
             {!isOwner && (
               <div className="more-item" onClick={() => setShowMoreMenu(false)}>
-                <X size={18} color="#666" />
-                关闭
+                <X size={18} color="#666" /> 关闭
               </div>
             )}
           </div>
