@@ -53,137 +53,132 @@ p {
    通用组件样式
    ============================================ */
 
-/* 输入框 */
-.input {
-  @apply w-full px-4 py-3 rounded-xl border border-cream bg-white text-primary;
-  @apply transition-all duration-200 ease-ios;
-  @apply placeholder:text-tertiary;
-  font-size: 15px;
-  line-height: 1.5;
-}
+@layer components {
+  /* 输入框 */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border bg-white;
+    border-color: #F0E6D8;
+    color: #1A1A1A;
+    @apply transition-all duration-200;
+    font-size: 15px;
+    line-height: 1.5;
+    transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
 
-.input:focus {
-  @apply outline-none border-accent ring-2 ring-accent/10;
-  box-shadow: 0 0 0 4px rgba(255, 140, 90, 0.08);
-}
+  .input::placeholder {
+    color: #9CA3AF;
+  }
 
-.input:active {
-  @apply scale-[0.99];
-}
+  .input:focus {
+    @apply outline-none ring-2;
+    border-color: #FF8C5A;
+    box-shadow: 0 0 0 4px rgba(255, 140, 90, 0.08);
+  }
 
-/* 主按钮 */
-.btn-primary {
-  @apply px-6 py-3 rounded-full font-medium text-white;
-  @apply transition-all duration-200 ease-ios;
-  @apply active:scale-[0.97] select-none;
-  background: linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%);
-  box-shadow: 0 4px 12px rgba(255, 140, 90, 0.3);
-  font-size: 15px;
-  letter-spacing: 0.02em;
-}
+  .input:active {
+    transform: scale(0.99);
+  }
 
-.btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(255, 140, 90, 0.4);
-  transform: translateY(-1px);
-}
+  /* 主按钮 */
+  .btn-primary {
+    @apply px-6 py-3 rounded-full font-medium text-white;
+    @apply transition-all duration-200;
+    @apply select-none;
+    background: linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%);
+    box-shadow: 0 4px 12px rgba(255, 140, 90, 0.3);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
 
-.btn-primary:active {
-  @apply scale-[0.97];
-  box-shadow: 0 2px 8px rgba(255, 140, 90, 0.2);
-}
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(255, 140, 90, 0.4);
+    transform: translateY(-1px);
+  }
 
-.btn-primary:disabled {
-  @apply opacity-50 cursor-not-allowed;
-  transform: none;
-}
+  .btn-primary:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(255, 140, 90, 0.2);
+  }
 
-/* 次要按钮 */
-.btn-secondary {
-  @apply px-5 py-2.5 rounded-full font-medium;
-  @apply bg-cream-100 text-cream-700;
-  @apply transition-all duration-200 ease-ios;
-  @apply active:scale-[0.97] select-none;
-  font-size: 14px;
-}
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    transform: none;
+  }
 
-.btn-secondary:active {
-  @apply bg-cream-200;
-}
+  /* 次要按钮 */
+  .btn-secondary {
+    @apply px-5 py-2.5 rounded-full font-medium;
+    background-color: #FBF6EE;
+    color: #5D4E37;
+    @apply transition-all duration-200;
+    @apply select-none;
+    font-size: 14px;
+    transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
 
-/* 卡片 */
-.card {
-  @apply bg-white rounded-card;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  @apply transition-all duration-300 ease-ios;
-}
+  .btn-secondary:active {
+    background-color: #F5E6D0;
+    transform: scale(0.97);
+  }
 
-.card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-}
+  /* 卡片 */
+  .card {
+    @apply bg-white rounded-card;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+    @apply transition-all duration-300;
+    transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
 
-.card:active {
-  @apply scale-[0.985];
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
+  .card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
 
-/* 标签 */
-.tag {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium;
-  @apply transition-all duration-200;
-  letter-spacing: 0.01em;
-}
+  .card:active {
+    transform: scale(0.985);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
 
-.tag-primary {
-  @apply bg-accent-50 text-accent-dark;
-}
+  /* 标签 */
+  .tag {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium;
+    @apply transition-all duration-200;
+    letter-spacing: 0.01em;
+  }
 
-.tag-warning {
-  @apply bg-amber-50 text-amber-700;
-}
+  .tag-primary {
+    background-color: #FFF4ED;
+    color: #E5784A;
+  }
 
-.tag-info {
-  @apply bg-blue-50 text-blue-600;
-}
+  .tag-warning {
+    background-color: #FFFBEB;
+    color: #B45309;
+  }
 
-.tag-success {
-  @apply bg-emerald-50 text-emerald-600;
-}
+  .tag-info {
+    background-color: #EFF6FF;
+    color: #2563EB;
+  }
 
-/* 触控目标 - 最小44px */
-.touch-target {
-  min-width: 44px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  .tag-success {
+    background-color: #ECFDF5;
+    color: #059669;
+  }
+
+  /* 触控目标 - 最小44px */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* ============================================
    iOS风格动画
    ============================================ */
-
-/* 页面过渡 */
-.page-enter {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-.page-enter-active {
-  opacity: 1;
-  transform: translateX(0);
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.page-exit {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.page-exit-active {
-  opacity: 0;
-  transform: translateX(-20px);
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
 
 /* 卡片列表入场 - 瀑布流效果 */
 .stagger-item {
@@ -260,25 +255,6 @@ p {
   }
 }
 
-/* 下拉刷新指示器 */
-.pull-indicator {
-  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-/* 浮动效果 */
-.float-animation {
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
 /* 渐变文字 */
 .gradient-text {
   background: linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%);
@@ -337,24 +313,4 @@ p {
    ============================================ */
 img {
   content-visibility: auto;
-  contain-intrinsic-size: auto 130px;
-}
-
-/* ============================================
-   深色模式占位（未来扩展）
-   ============================================ */
-@media (prefers-color-scheme: dark) {
-  /* 预留深色模式变量 */
-}
-
-/* ============================================
-   打印样式
-   ============================================ */
-@media print {
-  body {
-    background: white;
-  }
-  .no-print {
-    display: none !important;
-  }
 }
