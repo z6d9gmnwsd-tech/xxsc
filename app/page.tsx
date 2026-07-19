@@ -169,7 +169,7 @@ export default function HomePage() {
 
       <FooterDisclaimer />
 
-      <BottomNav activePage="home" />
+      <BottomNav activeTab="home" />
       
       <AuthModal
         isOpen={showAuthModal}
