@@ -97,7 +97,7 @@ export default function MyFavoritesPage() {
           </div>
         </div>
         <FavoritesSkeleton />
-        <BottomNav activePage="my" />
+        <BottomNav activeTab="profile" />
       </div>
     )
   }
@@ -189,7 +189,7 @@ export default function MyFavoritesPage() {
         </div>
       )}
 
-      <BottomNav activePage="my" />
+      <BottomNav activeTab="profile" />
     </div>
   )
 }
