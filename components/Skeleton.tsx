@@ -1,12 +1,12 @@
 'use client'
 
 interface SkeletonProps {
-  type?: 'card' | 'text' | 'avatar' | 'image'
+  type?: 'card' | 'text' | 'avatar' | 'image' | 'list'
   count?: number
 }
 
 export default function Skeleton({ type = 'card', count = 3 }: SkeletonProps) {
-  if (type === 'card') {
+  if (type === 'card' || type === 'list') {
     return (
       <div className="space-y-3">
         {Array.from({ length: count }).map((_, index) => (
