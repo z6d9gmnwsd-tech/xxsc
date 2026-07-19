@@ -70,33 +70,42 @@ export default function DetailContent() {
         setIsbnCount(count || 0)
       }
     } catch (err) {
-      console.error('Error:', err)
+      console.error('Error loading book:', err)
     }
     setLoading(false)
   }
 
   const checkFavorite = async (bookId: string) => {
-    const { data } = await supabase
-      .from('favorites')
-      .select('id')
-      .eq('user_id', user!.id)
-      .eq('book_id', bookId)
-      .single()
-    setIsFavorite(!!data)
+    try {
+      const { data } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('user_id', user!.id)
+        .eq('book_id', bookId)
+        .single()
+      setIsFavorite(!!data)
+    } catch (err) {
+      console.error('Error checking favorite:', err)
+    }
   }
 
   const toggleFavorite = async () => {
     if (!user) { setShowAuthModal(true); return }
     if (!book) return
 
-    if (isFavorite) {
-      await supabase.from('favorites').delete().eq('user_id', user.id).eq('book_id', book.id)
-      setIsFavorite(false)
-      showToast('info', '已取消收藏')
-    } else {
-      await supabase.from('favorites').insert({ user_id: user.id, book_id: book.id })
-      setIsFavorite(true)
-      showToast('success', '收藏成功')
+    try {
+      if (isFavorite) {
+        await supabase.from('favorites').delete().eq('user_id', user.id).eq('book_id', book.id)
+        setIsFavorite(false)
+        showToast('info', '已取消收藏')
+      } else {
+        await supabase.from('favorites').insert({ user_id: user.id, book_id: book.id })
+        setIsFavorite(true)
+        showToast('success', '收藏成功')
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err)
+      showToast('error', '操作失败，请重试')
     }
   }
 
@@ -121,25 +130,40 @@ export default function DetailContent() {
 
   const handleDelete = async () => {
     if (!book || !confirm('确定要删除这个商品吗？')) return
-    await supabase.from('books').delete().eq('id', book.id)
-    showToast('success', '已删除')
-    setTimeout(() => router.push('/'), 1000)
+    try {
+      await supabase.from('books').delete().eq('id', book.id)
+      showToast('success', '已删除')
+      setTimeout(() => router.push('/'), 1000)
+    } catch (err) {
+      console.error('Error deleting book:', err)
+      showToast('error', '删除失败，请重试')
+    }
   }
 
   const handleMarkSold = async () => {
     if (!book) return
-    await supabase.from('books').update({ status: '已售出' }).eq('id', book.id)
-    setBook({ ...book!, status: '已售出' })
-    setShowMore(false)
-    showToast('success', '已标记为售出')
+    try {
+      await supabase.from('books').update({ status: '已售出' }).eq('id', book.id)
+      setBook({ ...book!, status: '已售出' })
+      setShowMore(false)
+      showToast('success', '已标记为售出')
+    } catch (err) {
+      console.error('Error marking sold:', err)
+      showToast('error', '操作失败，请重试')
+    }
   }
 
   const handleOffline = async () => {
     if (!book) return
-    await supabase.from('books').update({ status: '已下架' }).eq('id', book.id)
-    setBook({ ...book!, status: '已下架' })
-    setShowMore(false)
-    showToast('success', '已下架')
+    try {
+      await supabase.from('books').update({ status: '已下架' }).eq('id', book.id)
+      setBook({ ...book!, status: '已下架' })
+      setShowMore(false)
+      showToast('success', '已下架')
+    } catch (err) {
+      console.error('Error taking offline:', err)
+      showToast('error', '操作失败，请重试')
+    }
   }
 
   const getAllImages = () => {
@@ -172,11 +196,10 @@ export default function DetailContent() {
         <BackButton />
       </div>
 
-      {/* 图片区域 */}
       {allImages.length > 0 ? (
         <div className="relative">
           <div className="w-full h-[300px] cursor-pointer" onClick={() => setShowImageViewer(true)}>
-            <img src={allImages[currentImageIndex]} alt={book.title} className="w-full h-full object-cover" />
+            <img src={allImages[currentImageIndex]} alt={book.title} className="w-full h-full object-cover" loading="lazy" />
           </div>
           {allImages.length > 1 && (
             <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full text-xs bg-black/50 text-white">
@@ -193,7 +216,6 @@ export default function DetailContent() {
         </div>
       )}
 
-      {/* 价格与标题 */}
       <div className="p-4 bg-white">
         <div className="flex items-baseline gap-2 mb-2">
           <span className="text-3xl font-bold text-accent">¥{book.price}</span>
@@ -210,7 +232,6 @@ export default function DetailContent() {
         </div>
       </div>
 
-      {/* 详细信息 */}
       <div className="mt-2 p-4 bg-white">
         <h2 className="font-semibold mb-3 text-primary">详细信息</h2>
         <div className="space-y-2 text-sm">
@@ -224,14 +245,13 @@ export default function DetailContent() {
         )}
       </div>
 
-      {/* 卖家信息 */}
       {book.profiles && (
         <div className="mt-2 p-4 bg-white">
           <h2 className="font-semibold mb-3 text-primary">卖家信息</h2>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden bg-gray-100">
               {book.profiles.avatar_url ? (
-                <img src={book.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                <img src={book.profiles.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
               ) : (
                 <span className="text-2xl">👤</span>
               )}
@@ -253,7 +273,6 @@ export default function DetailContent() {
         </div>
       )}
 
-      {/* 安全提示 */}
       <div className="p-3 mx-4 mt-4 rounded-card bg-amber-50 border-l-4 border-amber-400">
         <div className="flex items-start gap-2">
           <span className="text-xl">⚠️</span>
@@ -261,7 +280,6 @@ export default function DetailContent() {
         </div>
       </div>
 
-      {/* 底部操作栏 */}
       <div className="fixed bottom-0 left-0 right-0 p-3 flex gap-3 z-50 bg-white border-t border-gray-100"
            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
         <button onClick={toggleFavorite} className="flex flex-col items-center gap-1 px-4 py-2 touch-target active:scale-95 transition-transform"
@@ -285,7 +303,6 @@ export default function DetailContent() {
         )}
       </div>
 
-      {/* 更多操作面板 */}
       {showMore && isMine && (
         <div className="fixed bottom-20 left-0 right-0 p-4 z-50 bg-white border-t border-gray-100 animate-slide-up"
              style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
@@ -296,7 +313,6 @@ export default function DetailContent() {
         </div>
       )}
 
-      {/* 图片全屏查看器 */}
       {showImageViewer && allImages.length > 0 && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 animate-fade-in" onClick={() => setShowImageViewer(false)}>
           <button onClick={() => setShowImageViewer(false)} className="absolute top-4 right-4 text-white text-2xl z-[110] touch-target active:scale-95 transition-transform">✕</button>
@@ -304,7 +320,7 @@ export default function DetailContent() {
             {currentImageIndex > 0 && (
               <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex - 1) }} className="text-white text-3xl p-2 touch-target active:scale-95 transition-transform">‹</button>
             )}
-            <img src={allImages[currentImageIndex]} alt="" className="max-w-full max-h-[80vh] object-contain" onClick={(e) => e.stopPropagation()} />
+            <img src={allImages[currentImageIndex]} alt="" className="max-w-full max-h-[80vh] object-contain" onClick={(e) => e.stopPropagation()} loading="lazy" />
             {currentImageIndex < allImages.length - 1 && (
               <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex + 1) }} className="text-white text-3xl p-2 touch-target active:scale-95 transition-transform">›</button>
             )}
