@@ -2,148 +2,359 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   全局基础 - iOS级体验
+   ============================================ */
 * {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
-html, body {
-  max-width: 100vw;
-  overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: #FBF8F3;
-  color: #333333;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+  background-color: #FEFCF9;
+  color: #1A1A1A;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
 }
 
-.bg-gradient-primary {
-  background: linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%);
+/* iOS-like momentum scrolling */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
 }
 
-.btn-primary {
-  font-weight: 700;
-  border-radius: 9999px;
-  transition: all 0.2s ease;
-  display: inline-block;
-  text-align: center;
-  text-decoration: none;
-  user-select: none;
-  background: linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 100%);
-  color: #5D4E37;
-  padding: 0.6rem 1.2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-.btn-primary:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-.btn-primary:active {
-  transform: translateY(0) scale(0.95);
-}
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-accent {
-  font-weight: 700;
-  border-radius: 9999px;
-  transition: all 0.2s ease;
-  display: inline-block;
-  text-align: center;
-  text-decoration: none;
-  user-select: none;
-  background: linear-gradient(135deg, #ffa06f 0%, #E58A5A 100%);
-  color: #fff;
-  padding: 0.6rem 1.2rem;
-  box-shadow: 0 2px 8px rgba(255, 160, 111, 0.3);
-}
-.btn-accent:active {
-  transform: scale(0.95);
-}
-
-.card {
-  border-radius: 1rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
-  transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-}
-.card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-
-.input {
-  width: 100%;
-  padding: 0.6rem 0.8rem;
-  border: 2px solid #E0D5C8;
-  border-radius: 1rem;
-  font-size: 0.9rem;
-  font-weight: 400;
-  transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.95);
-  color: #333333;
-}
-.input:focus {
-  outline: none;
-  border-color: #C4A882;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(196, 168, 130, 0.1);
-}
-.input::placeholder {
-  color: #999999;
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 9999px;
+/* ============================================
+   排版系统
+   ============================================ */
+h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
-  user-select: none;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.7rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: #1A1A1A;
+}
+
+p {
+  line-height: 1.7;
+  color: #6B7280;
+}
+
+/* ============================================
+   通用组件样式
+   ============================================ */
+
+/* 输入框 */
+.input {
+  @apply w-full px-4 py-3 rounded-xl border border-cream bg-white text-primary;
+  @apply transition-all duration-200 ease-ios;
+  @apply placeholder:text-tertiary;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.input:focus {
+  @apply outline-none border-accent ring-2 ring-accent/10;
+  box-shadow: 0 0 0 4px rgba(255, 140, 90, 0.08);
+}
+
+.input:active {
+  @apply scale-[0.99];
+}
+
+/* 主按钮 */
+.btn-primary {
+  @apply px-6 py-3 rounded-full font-medium text-white;
+  @apply transition-all duration-200 ease-ios;
+  @apply active:scale-[0.97] select-none;
+  background: linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%);
+  box-shadow: 0 4px 12px rgba(255, 140, 90, 0.3);
+  font-size: 15px;
   letter-spacing: 0.02em;
 }
-.tag-primary {
-  background: linear-gradient(135deg, #FBF8F3, #F5E6D0);
-  color: #555555;
-  border: 1px solid rgba(240, 222, 191, 0.5);
-}
-.tag-success {
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-  color: #5A8F5C;
-  border: 1px solid rgba(90, 143, 92, 0.2);
-}
-.tag-warning {
-  background: linear-gradient(135deg, #FFF8E1, #FFECB3);
-  color: #C49A00;
-  border: 1px solid rgba(246, 193, 44, 0.3);
-}
-.tag-info {
-  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-  color: #5A7FA0;
-  border: 1px solid rgba(90, 127, 160, 0.2);
+
+.btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(255, 140, 90, 0.4);
+  transform: translateY(-1px);
 }
 
+.btn-primary:active {
+  @apply scale-[0.97];
+  box-shadow: 0 2px 8px rgba(255, 140, 90, 0.2);
+}
+
+.btn-primary:disabled {
+  @apply opacity-50 cursor-not-allowed;
+  transform: none;
+}
+
+/* 次要按钮 */
+.btn-secondary {
+  @apply px-5 py-2.5 rounded-full font-medium;
+  @apply bg-cream-100 text-cream-700;
+  @apply transition-all duration-200 ease-ios;
+  @apply active:scale-[0.97] select-none;
+  font-size: 14px;
+}
+
+.btn-secondary:active {
+  @apply bg-cream-200;
+}
+
+/* 卡片 */
+.card {
+  @apply bg-white rounded-card;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  @apply transition-all duration-300 ease-ios;
+}
+
+.card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.card:active {
+  @apply scale-[0.985];
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* 标签 */
+.tag {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium;
+  @apply transition-all duration-200;
+  letter-spacing: 0.01em;
+}
+
+.tag-primary {
+  @apply bg-accent-50 text-accent-dark;
+}
+
+.tag-warning {
+  @apply bg-amber-50 text-amber-700;
+}
+
+.tag-info {
+  @apply bg-blue-50 text-blue-600;
+}
+
+.tag-success {
+  @apply bg-emerald-50 text-emerald-600;
+}
+
+/* 触控目标 - 最小44px */
 .touch-target {
   min-width: 44px;
   min-height: 44px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-::-webkit-scrollbar { width: 3px; height: 3px; }
-::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.08); border-radius: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
+/* ============================================
+   iOS风格动画
+   ============================================ */
 
-@media (orientation: landscape) {
+/* 页面过渡 */
+.page-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.page-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 卡片列表入场 - 瀑布流效果 */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: staggerFadeIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 50ms; }
+.stagger-item:nth-child(3) { animation-delay: 100ms; }
+.stagger-item:nth-child(4) { animation-delay: 150ms; }
+.stagger-item:nth-child(5) { animation-delay: 200ms; }
+.stagger-item:nth-child(6) { animation-delay: 250ms; }
+.stagger-item:nth-child(7) { animation-delay: 300ms; }
+.stagger-item:nth-child(8) { animation-delay: 350ms; }
+
+@keyframes staggerFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 按钮点击涟漪效果 */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
+  opacity: 0;
+}
+
+.ripple:active::after {
+  width: 200%;
+  height: 200%;
+  opacity: 1;
+  transition: width 0s, height 0s, opacity 0s;
+}
+
+/* 骨架屏闪烁动画 */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 下拉刷新指示器 */
+.pull-indicator {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 浮动效果 */
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* 渐变文字 */
+.gradient-text {
+  background: linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 毛玻璃效果 */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* 安全区域适配 */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================
+   滚动条美化
+   ============================================ */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   选择文本颜色
+   ============================================ */
+::selection {
+  background: rgba(255, 140, 90, 0.2);
+  color: #1A1A1A;
+}
+
+/* ============================================
+   图片加载优化
+   ============================================ */
+img {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 130px;
+}
+
+/* ============================================
+   深色模式占位（未来扩展）
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  /* 预留深色模式变量 */
+}
+
+/* ============================================
+   打印样式
+   ============================================ */
+@media print {
   body {
-    max-height: 100vh;
-    overflow-y: auto;
+    background: white;
+  }
+  .no-print {
+    display: none !important;
   }
 }
