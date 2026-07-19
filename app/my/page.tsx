@@ -14,6 +14,7 @@ export default function MyPage() {
   const handleLogout = () => {
     if (confirm('确定要退出登录吗？')) {
       logout()
+      window.location.reload()
     }
   }
 
@@ -38,16 +39,6 @@ export default function MyPage() {
       ),
       label: '我的收藏',
       href: '/my/favorites',
-    },
-    {
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9" stroke="#10B981" strokeWidth="1.8"/>
-          <path d="M12 7V12L15 15" stroke="#10B981" strokeWidth="1.8" strokeLinecap="round"/>
-        </svg>
-      ),
-      label: '交易记录',
-      href: '/my/transactions',
     },
   ]
 
@@ -145,7 +136,7 @@ export default function MyPage() {
       </div>
 
       {user ? (
-        <div className="px-4 -mt-4 relative z-10 space-y-3">
+        <div className="px-4 -mt-6 relative z-10 space-y-3">
           <div className="card overflow-hidden">
             {menuItems.map((item, index) => (
               <a
@@ -226,7 +217,7 @@ export default function MyPage() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onSuccess={() => { setShowAuthModal(false); router.refresh() }}
+        onSuccess={() => { setShowAuthModal(false); window.location.reload() }}
       />
     </div>
   )
