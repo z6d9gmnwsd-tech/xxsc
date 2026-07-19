@@ -178,7 +178,7 @@ export default function PublishForm() {
         }
         bitmap.close()
       } else {
-        showToast('error', '您的浏览器不支持条形码识别，请手动输入ISBN')
+        showToast('error', '当前浏览器不支持条形码识别，请手动输入ISBN')
       }
     } catch (err) {
       showToast('error', '识别失败，请手动输入')
@@ -200,8 +200,8 @@ export default function PublishForm() {
       return
     }
 
-    if (!isbn.trim()) {
-      showToast('error', '请填写ISBN码')
+    if (category === '教材' && !isbn.trim()) {
+      showToast('error', '教材类商品请填写ISBN码')
       return
     }
 
@@ -297,7 +297,7 @@ export default function PublishForm() {
           ].map((item) => (
             <div
               key={item.key}
-              onClick={() => { setCategory(item.key); setExamType(''); setSelectedExamSubjects([]); }}
+              onClick={() => { setCategory(item.key); setExamType(''); setSelectedExamSubjects([]); setIsbn(''); }}
               className="flex-1 p-4 rounded-xl text-center cursor-pointer transition-all duration-200 active:scale-95"
               style={{
                 background: category === item.key ? '#FFF8F0' : '#fff',
@@ -364,35 +364,39 @@ export default function PublishForm() {
             <span className="w-20 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> 书名</span>
             <input className="flex-1 input" placeholder="请输入书名或资料名称" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
-          <div className="flex items-center gap-3">
-            <span className="w-20 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> ISBN码</span>
-            <input className="flex-1 input" placeholder="请输入ISBN码" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleScanISBN}
-              disabled={scanning}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={scanning}
-              className="px-3 py-2 rounded-xl text-sm font-medium bg-blue-50 text-blue-600 border border-blue-200 active:scale-95 transition-transform whitespace-nowrap"
-            >
-              {scanning ? '识别中...' : '📷 扫描'}
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="w-20 text-sm text-primary flex-shrink-0">作者</span>
-            <input className="flex-1 input" placeholder="选填" value={author} onChange={(e) => setAuthor(e.target.value)} />
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="w-20 text-sm text-primary flex-shrink-0">出版社</span>
-            <input className="flex-1 input" placeholder="选填" value={publisher} onChange={(e) => setPublisher(e.target.value)} />
-          </div>
+          {category === '教材' && (
+            <>
+              <div className="flex items-center gap-3">
+                <span className="w-20 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> ISBN码</span>
+                <input className="flex-1 input" placeholder="请输入ISBN码" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleScanISBN}
+                  disabled={scanning}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={scanning}
+                  className="px-3 py-2 rounded-xl text-sm font-medium bg-blue-50 text-blue-600 border border-blue-200 active:scale-95 transition-transform whitespace-nowrap"
+                >
+                  {scanning ? '识别中...' : '📷 扫描'}
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-20 text-sm text-primary flex-shrink-0">作者</span>
+                <input className="flex-1 input" placeholder="选填" value={author} onChange={(e) => setAuthor(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-20 text-sm text-primary flex-shrink-0">出版社</span>
+                <input className="flex-1 input" placeholder="选填" value={publisher} onChange={(e) => setPublisher(e.target.value)} />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
