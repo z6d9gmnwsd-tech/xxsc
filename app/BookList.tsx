@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import useSWR from 'swr'
 import BookCard from '@/components/BookCard'
-import Skeleton from '@/components/Skeleton'
 import EmptyState from '@/components/EmptyState'
+import Skeleton from '@/components/Skeleton'
 import { Book } from '@/types'
 
 interface BookListProps {
@@ -68,10 +68,10 @@ function BookList({ searchQuery = '', sortBy = 'newest', filterCategory = '' }: 
   if (error) {
     return (
       <EmptyState
-        icon="⚠️"
+        icon="📭"
         title="加载失败"
         description="请检查网络后重试"
-        action={{ label: '刷新页面', href: '/' }}
+        action={{ label: '刷新', href: '/' }}
       />
     )
   }
@@ -80,8 +80,8 @@ function BookList({ searchQuery = '', sortBy = 'newest', filterCategory = '' }: 
     return (
       <EmptyState
         icon="📚"
-        title={searchQuery ? '未找到相关书籍' : '暂无商品，快来发布第一本书吧！'}
-        description={searchQuery ? '换个关键词试试' : '发布你的闲置教材，让它们找到新主人'}
+        title={searchQuery ? '没有找到相关商品' : '暂无商品'}
+        description={searchQuery ? '换个关键词试试吧' : '快来发布第一件商品吧'}
         action={!searchQuery ? { label: '去发布', href: '/publish' } : undefined}
       />
     )
