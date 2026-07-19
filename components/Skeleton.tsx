@@ -22,20 +22,20 @@ export default function Skeleton({ type = 'card', count = 3 }: SkeletonProps) {
             <div className="flex-1 p-3.5 space-y-3">
               {/* 标题 */}
               <div className="space-y-2">
-                <div className="h-4 bg-cream-100 rounded-lg w-4/5 skeleton-shimmer" />
-                <div className="h-4 bg-cream-100 rounded-lg w-3/5 skeleton-shimmer" style={{ animationDelay: '0.1s' }} />
+                <div className="h-4 rounded-lg w-4/5 skeleton-shimmer" style={{ backgroundColor: '#F5E6D0' }} />
+                <div className="h-4 rounded-lg w-3/5 skeleton-shimmer" style={{ backgroundColor: '#F5E6D0', animationDelay: '0.1s' }} />
               </div>
 
               {/* 标签 */}
               <div className="flex gap-1.5">
-                <div className="h-5 bg-cream-100 rounded-md w-12 skeleton-shimmer" style={{ animationDelay: '0.2s' }} />
-                <div className="h-5 bg-cream-100 rounded-md w-10 skeleton-shimmer" style={{ animationDelay: '0.3s' }} />
+                <div className="h-5 rounded-md w-12 skeleton-shimmer" style={{ backgroundColor: '#F5E6D0', animationDelay: '0.2s' }} />
+                <div className="h-5 rounded-md w-10 skeleton-shimmer" style={{ backgroundColor: '#F5E6D0', animationDelay: '0.3s' }} />
               </div>
 
               {/* 价格 */}
               <div className="flex justify-between items-end">
-                <div className="h-6 bg-cream-100 rounded-lg w-16 skeleton-shimmer" style={{ animationDelay: '0.4s' }} />
-                <div className="h-3 bg-cream-100 rounded-lg w-12 skeleton-shimmer" style={{ animationDelay: '0.5s' }} />
+                <div className="h-6 rounded-lg w-16 skeleton-shimmer" style={{ backgroundColor: '#F5E6D0', animationDelay: '0.4s' }} />
+                <div className="h-3 rounded-lg w-12 skeleton-shimmer" style={{ backgroundColor: '#F5E6D0', animationDelay: '0.5s' }} />
               </div>
             </div>
           </div>
@@ -50,9 +50,10 @@ export default function Skeleton({ type = 'card', count = 3 }: SkeletonProps) {
         {Array.from({ length: count }).map((_, index) => (
           <div
             key={index}
-            className="h-4 bg-cream-100 rounded-lg skeleton-shimmer"
+            className="h-4 rounded-lg skeleton-shimmer"
             style={{
               width: `${Math.random() * 40 + 60}%`,
+              backgroundColor: '#F5E6D0',
               animationDelay: `${index * 100}ms`,
             }}
           />
@@ -64,10 +65,10 @@ export default function Skeleton({ type = 'card', count = 3 }: SkeletonProps) {
   if (type === 'avatar') {
     return (
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-cream-100 skeleton-shimmer" />
+        <div className="w-10 h-10 rounded-full skeleton-shimmer" style={{ backgroundColor: '#F5E6D0' }} />
         <div className="flex-1 space-y-2">
-          <div className="h-4 bg-cream-100 rounded-lg w-1/3 skeleton-shimmer" />
-          <div className="h-3 bg-cream-100 rounded-lg w-1/2 skeleton-shimmer" style={{ animationDelay: '0.1s' }} />
+          <div className="h-4 rounded-lg w-1/3 skeleton-shimmer" style={{ backgroundColor: '#F5E6D0' }} />
+          <div className="h-3 rounded-lg w-1/2 skeleton-shimmer" style={{ backgroundColor: '#F5E6D0', animationDelay: '0.1s' }} />
         </div>
       </div>
     )
@@ -75,7 +76,7 @@ export default function Skeleton({ type = 'card', count = 3 }: SkeletonProps) {
 
   if (type === 'image') {
     return (
-      <div className="w-full h-48 bg-cream-100 rounded-card skeleton-shimmer" />
+      <div className="w-full h-48 rounded-card skeleton-shimmer" style={{ backgroundColor: '#F5E6D0' }} />
     )
   }
 
