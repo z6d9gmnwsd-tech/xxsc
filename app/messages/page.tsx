@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import { useRouter } from 'next/navigation'
-import { getTimeAgo } from '@/lib/utils'
+import { MessageSquare, User } from 'lucide-react'
 import BottomNav from '@/components/BottomNav'
 import EmptyState from '@/components/EmptyState'
-import LoadingSpinner from '@/components/LoadingSpinner'
-import BackButton from '@/components/BackButton'
+import { SkeletonCard } from '@/components/LoadingSpinner'
+import { ChevronLeft } from 'lucide-react'
 
 interface Conversation {
   otherUserId: string
@@ -90,72 +90,73 @@ export default function MessagesPage() {
     setLoading(false)
   }
 
-  const getTimeAgoLocal = (dateStr: string) => {
-    const now = new Date()
-    const date = new Date(dateStr)
-    const diff = now.getTime() - date.getTime()
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
-    if (days > 0) return `${days}天前`
-    if (hours > 0) return `${hours}小时前`
-    if (minutes > 0) return `${minutes}分钟前`
-    return '刚刚'
-  }
-
-  if (userLoading || loading) return <LoadingSpinner />
+  if (userLoading || loading) return <SkeletonCard />
 
   if (!user) {
     return (
-      <div className="pb-20">
-        <div className="px-4 py-6 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
+      <div className="pb-24 min-h-screen" style={{ background: '#F2F2F7' }}>
+        <div className="header-glass px-4 py-5 text-white">
           <div className="flex items-center gap-3">
-            <BackButton />
-            <h1 className="text-xl font-bold">消息</h1>
+            <button onClick={() => router.back()} className="w-8 h-8 rounded-full flex items-center justify-center" style={{background: 'rgba(255,255,255,0.15)'}}>
+              <ChevronLeft size={20} />
+            </button>
+            <MessageSquare size={20} />
+            <h1 className="text-lg font-bold">消息</h1>
           </div>
         </div>
-        <EmptyState icon="💬" title="暂无消息" description="登录后查看消息" action={{ label: "登录 / 注册", href: "/my" }} />
-        <BottomNav activePage="my" />
+        <EmptyState
+          icon={<MessageSquare size={32} style={{color: '#5B8C5A'}} />}
+          title="暂无消息"
+          description="登录后查看消息"
+          action={{ label: "登录 / 注册", href: "/my" }}
+        />
+        <BottomNav activeTab="profile" />
       </div>
     )
   }
 
   return (
-    <div className="pb-20">
-      <div className="px-4 py-6 text-white" style={{background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)'}}>
+    <div className="pb-24 min-h-screen" style={{ background: '#F2F2F7' }}>
+      <div className="header-glass px-4 py-5 text-white">
         <div className="flex items-center gap-3">
-          <BackButton />
-          <h1 className="text-xl font-bold">消息</h1>
+          <button onClick={() => router.back()} className="w-8 h-8 rounded-full flex items-center justify-center" style={{background: 'rgba(255,255,255,0.15)'}}>
+            <ChevronLeft size={20} />
+          </button>
+          <MessageSquare size={20} />
+          <h1 className="text-lg font-bold">消息</h1>
         </div>
       </div>
 
       {conversations.length === 0 ? (
-        <EmptyState icon="💬" title="暂无消息" description="浏览商品时点击联系卖家开始聊天" />
+        <EmptyState
+          icon={<MessageSquare size={32} style={{color: '#5B8C5A'}} />}
+          title="暂无消息"
+          description="浏览商品时点击联系卖家开始聊天"
+        />
       ) : (
         <div className="px-4 py-2">
           {conversations.map((conv) => (
             <a
               key={conv.otherUserId}
               href={`/chat?id=${conv.otherUserId}`}
-              className="card flex items-center gap-3 mb-3 animate-fade-in block"
-              style={{margin: '16px 0', padding: '28rpx'}}
+              className="card flex items-center gap-3 mb-3 block"
             >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{background: '#e0e0e0'}}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{background: 'linear-gradient(135deg, #5B8C5A, #40916C)'}}>
                 {conv.otherAvatar ? (
                   <img src={conv.otherAvatar} alt="" className="w-full h-full object-cover rounded-full" />
                 ) : (
-                  <span className="text-xl">👤</span>
+                  <User size={20} color="#fff" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium" style={{color: '#333'}}>{conv.otherNickname}</span>
-                  <span className="text-xs" style={{color: '#999'}}>{getTimeAgoLocal(conv.lastTime)}</span>
+                  <span className="font-medium text-sm" style={{color: '#1a1a1a'}}>{conv.otherNickname}</span>
+                  <span className="text-[11px]" style={{color: '#bbb'}}>{conv.lastTime}</span>
                 </div>
-                <p className="text-sm mt-1 truncate" style={{color: '#666'}}>{conv.lastMessage}</p>
+                <p className="text-xs mt-1 truncate" style={{color: '#666'}}>{conv.lastMessage}</p>
               </div>
               {conv.unread > 0 && (
-                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{background: '#ffa06f', color: '#fff', fontSize: '10px'}}>
+                <div className="min-w-[20px] h-5 rounded-full flex items-center justify-center flex-shrink-0 px-1.5" style={{background: '#E8590C', color: '#fff', fontSize: '10px', fontWeight: 600}}>
                   {conv.unread}
                 </div>
               )}
@@ -164,7 +165,7 @@ export default function MessagesPage() {
         </div>
       )}
 
-      <BottomNav activePage="my" />
+      <BottomNav activeTab="profile" />
     </div>
   )
 }
