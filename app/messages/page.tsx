@@ -105,7 +105,7 @@ export default function MessagesPage() {
           </div>
         </div>
         <EmptyState
-          icon={<MessageSquare size={32} style={{color: '#5B8C5A'}} />}
+          icon={MessageSquare}
           title="暂无消息"
           description="登录后查看消息"
           action={{ label: "登录 / 注册", href: "/my" }}
@@ -129,7 +129,7 @@ export default function MessagesPage() {
 
       {conversations.length === 0 ? (
         <EmptyState
-          icon={<MessageSquare size={32} style={{color: '#5B8C5A'}} />}
+          icon={MessageSquare}
           title="暂无消息"
           description="浏览商品时点击联系卖家开始聊天"
         />
