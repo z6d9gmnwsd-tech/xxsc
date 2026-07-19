@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import { useRouter } from 'next/navigation'
-import { showToast } from '@/components/Toast'
+import Toast, { showToast } from '@/components/Toast'
 
 export default function PublishForm() {
   const { user } = usePhoneAuth()
@@ -12,6 +12,8 @@ export default function PublishForm() {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [scanning, setScanning] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [title, setTitle] = useState('')
   const [isbn, setIsbn] = useState('')
@@ -27,6 +29,8 @@ export default function PublishForm() {
   const [images, setImages] = useState<string[]>([])
   const [selectedGrades, setSelectedGrades] = useState<string[]>(['全年级通用'])
   const [selectedMajors, setSelectedMajors] = useState<string[]>(['全专业通用'])
+  const [examType, setExamType] = useState('')
+  const [selectedExamSubjects, setSelectedExamSubjects] = useState<string[]>([])
 
   const grades = ['全年级通用', '大一', '大二', '大三', '大四', '研一', '研二', '研三']
 
@@ -44,6 +48,24 @@ export default function PublishForm() {
     { name: '管理学', majors: ['工商管理', '市场营销', '会计学', '财务管理', '人力资源管理'] },
     { name: '艺术学', majors: ['艺术设计', '音乐学', '美术学', '动画'] },
   ]
+
+  const examTypes = ['考研', '考公考编', '其他']
+
+  const examSubjectsData: Record<string, Record<string, string[]>> = {
+    '考研': {
+      '公共课': ['政治', '英语一', '英语二', '数学一', '数学二', '数学三', '俄语', '日语'],
+      '专业课（统考）': [
+        '计算机学科专业基础(408)', '教育学专业基础(311)', '心理学专业基础(312)', '历史学基础(313)',
+        '数学分析/高等代数', '西医综合(306)', '中医综合(307)', '法律硕士专业基础(398)',
+        '法律硕士综合(498)', '管理类联考综合能力(199)', '经济类联考综合能力(396)'
+      ],
+      '专业课（非统考/自命题）': ['自命题专业课']
+    },
+    '考公考编': {
+      '笔试科目': ['行政职业能力测验', '申论', '公共基础知识', '综合应用能力', '职业能力倾向测验'],
+      '考试类型': ['国家公务员考试', '省公务员考试', '事业单位考试', '教师资格考试', '银行/国企招聘', '军队文职']
+    }
+  }
 
   const toggleGrade = (grade: string) => {
     if (grade === '全年级通用') {
@@ -71,6 +93,12 @@ export default function PublishForm() {
       }
       setSelectedMajors(newMajors.length === 0 ? ['全专业通用'] : newMajors)
     }
+  }
+
+  const toggleExamSubject = (subject: string) => {
+    setSelectedExamSubjects(prev =>
+      prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
+    )
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,6 +153,42 @@ export default function PublishForm() {
     }
   }
 
+  const handleScanISBN = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setScanning(true)
+
+    try {
+      if ('BarcodeDetector' in window) {
+        const bitmap = await createImageBitmap(file)
+        const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['ean_13'] })
+        const barcodes = await barcodeDetector.detect(bitmap)
+
+        if (barcodes.length > 0) {
+          const code = barcodes[0].rawValue
+          if (/^97[89]\d{10}$/.test(code)) {
+            setIsbn(code)
+            showToast('success', 'ISBN识别成功：' + code)
+          } else {
+            showToast('error', '识别到条形码：' + code + '，不是有效ISBN')
+          }
+        } else {
+          showToast('error', '未识别到ISBN条形码，请手动输入')
+        }
+        bitmap.close()
+      } else {
+        showToast('error', '您的浏览器不支持条形码识别，请手动输入ISBN')
+      }
+    } catch (err) {
+      showToast('error', '识别失败，请手动输入')
+      console.error('Barcode scan error:', err)
+    }
+
+    setScanning(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleSubmit = async () => {
     if (!user) {
       showToast('error', '请先登录')
@@ -136,8 +200,8 @@ export default function PublishForm() {
       return
     }
 
-    if (category === '教材' && !isbn.trim()) {
-      showToast('error', '教材类商品请填写ISBN')
+    if (!isbn.trim()) {
+      showToast('error', '请填写ISBN码')
       return
     }
 
@@ -153,59 +217,77 @@ export default function PublishForm() {
 
     setLoading(true)
 
-    const description = [
-      wechat ? `微信号：${wechat}` : '',
-      phone ? `联系电话：${phone}` : '',
-      remark ? `备注：${remark}` : '',
-    ].filter(Boolean).join('\n')
+    try {
+      const description = [
+        wechat ? `微信号：${wechat}` : '',
+        phone ? `联系电话：${phone}` : '',
+        remark ? `备注：${remark}` : '',
+      ].filter(Boolean).join('\n')
 
-    const { error: insertError } = await supabase.from('books').insert({
-      user_id: user.id,
-      title: title.trim(),
-      isbn: isbn.trim() || null,
-      author: author.trim() || null,
-      publisher: publisher.trim() || null,
-      price: parseFloat(price),
-      original_price: originalPrice ? parseFloat(originalPrice) : null,
-      condition,
-      category,
-      grade: selectedGrades.join(','),
-      subject: selectedMajors.join(','),
-      images,
-      image_url: images[0] || null,
-      description: description || null,
-    })
+      const insertData: any = {
+        user_id: user.id,
+        title: title.trim(),
+        isbn: isbn.trim() || null,
+        author: author.trim() || null,
+        publisher: publisher.trim() || null,
+        price: parseFloat(price),
+        original_price: originalPrice ? parseFloat(originalPrice) : null,
+        condition,
+        category,
+        images,
+        image_url: images[0] || null,
+        description: description || null,
+      }
 
-    setLoading(false)
+      if (category === '教材') {
+        insertData.grade = selectedGrades.join(',')
+        insertData.subject = selectedMajors.join(',')
+      } else if (category === '备考资料') {
+        insertData.exam_type = examType || null
+        insertData.exam_subjects = selectedExamSubjects.length > 0 ? selectedExamSubjects.join(',') : null
+      }
 
-    if (insertError) {
-      showToast('error', '发布失败：' + insertError.message)
-      return
+      const { error: insertError } = await supabase.from('books').insert(insertData)
+
+      if (insertError) {
+        showToast('error', '发布失败：' + insertError.message)
+        setLoading(false)
+        return
+      }
+
+      showToast('success', '发布成功！')
+      setTimeout(() => {
+        router.push('/')
+        router.refresh()
+      }, 1500)
+    } catch (err) {
+      showToast('error', '发布失败，请重试')
+      console.error('Publish error:', err)
     }
 
-    showToast('success', '发布成功！')
-    setTimeout(() => {
-      router.push('/')
-      router.refresh()
-    }, 1500)
+    setLoading(false)
   }
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 py-20" style={{ minHeight: '60vh' }}>
-        <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center mb-4">
-          <span className="text-4xl">📝</span>
+      <>
+        <Toast />
+        <div className="flex flex-col items-center justify-center p-8 py-20" style={{ minHeight: '60vh' }}>
+          <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center mb-4">
+            <span className="text-4xl">📝</span>
+          </div>
+          <h2 className="text-xl font-semibold mb-2 text-primary">发布功能</h2>
+          <p className="mb-6 text-center text-gray-500">请先登录后再发布商品</p>
+          <a href="/my" className="btn-primary">去登录</a>
         </div>
-        <h2 className="text-xl font-semibold mb-2 text-primary">发布功能</h2>
-        <p className="mb-6 text-center text-gray-500">请先登录后再发布商品</p>
-        <a href="/my" className="btn-primary">去登录</a>
-      </div>
+      </>
     )
   }
 
   return (
     <div className="p-4 pb-20 space-y-4">
-      {/* 商品类型 */}
+      <Toast />
+
       <div className="rounded-card p-4 bg-white">
         <h3 className="font-bold mb-3 text-primary">商品类型</h3>
         <div className="flex gap-4">
@@ -215,7 +297,7 @@ export default function PublishForm() {
           ].map((item) => (
             <div
               key={item.key}
-              onClick={() => setCategory(item.key)}
+              onClick={() => { setCategory(item.key); setExamType(''); setSelectedExamSubjects([]); }}
               className="flex-1 p-4 rounded-xl text-center cursor-pointer transition-all duration-200 active:scale-95"
               style={{
                 background: category === item.key ? '#FFF8F0' : '#fff',
@@ -229,7 +311,6 @@ export default function PublishForm() {
         </div>
       </div>
 
-      {/* 商品图片 */}
       <div className="rounded-card p-4 bg-white">
         <h3 className="font-bold mb-3 text-primary">商品图片（{images.length}/5）</h3>
         {images.length > 0 ? (
@@ -242,9 +323,7 @@ export default function PublishForm() {
                 type="button"
                 onClick={() => removeImage(currentImageIndex)}
                 className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center bg-black/50 text-white touch-target active:scale-95 transition-transform"
-              >
-                ✕
-              </button>
+              >✕</button>
               <div className="absolute bottom-2 right-2 px-3 py-1 rounded-full text-xs bg-black/50 text-white">
                 {currentImageIndex + 1}/{images.length}
               </div>
@@ -278,34 +357,45 @@ export default function PublishForm() {
         )}
       </div>
 
-      {/* 基本信息 */}
       <div className="rounded-card p-4 bg-white">
         <h3 className="font-bold mb-3 text-primary">基本信息</h3>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> 书名</span>
+            <span className="w-20 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> 书名</span>
             <input className="flex-1 input" placeholder="请输入书名或资料名称" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
-          {category === '教材' && (
-            <>
-              <div className="flex items-center gap-3">
-                <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> ISBN</span>
-                <input className="flex-1 input" placeholder="请输入ISBN码" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="w-16 text-sm text-primary flex-shrink-0">作者</span>
-                <input className="flex-1 input" placeholder="选填" value={author} onChange={(e) => setAuthor(e.target.value)} />
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="w-16 text-sm text-primary flex-shrink-0">出版社</span>
-                <input className="flex-1 input" placeholder="选填" value={publisher} onChange={(e) => setPublisher(e.target.value)} />
-              </div>
-            </>
-          )}
+          <div className="flex items-center gap-3">
+            <span className="w-20 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> ISBN码</span>
+            <input className="flex-1 input" placeholder="请输入ISBN码" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleScanISBN}
+              disabled={scanning}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={scanning}
+              className="px-3 py-2 rounded-xl text-sm font-medium bg-blue-50 text-blue-600 border border-blue-200 active:scale-95 transition-transform whitespace-nowrap"
+            >
+              {scanning ? '识别中...' : '📷 扫描'}
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-20 text-sm text-primary flex-shrink-0">作者</span>
+            <input className="flex-1 input" placeholder="选填" value={author} onChange={(e) => setAuthor(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-20 text-sm text-primary flex-shrink-0">出版社</span>
+            <input className="flex-1 input" placeholder="选填" value={publisher} onChange={(e) => setPublisher(e.target.value)} />
+          </div>
         </div>
       </div>
 
-      {/* 适用范围 - 教材 */}
       {category === '教材' && (
         <div className="rounded-card p-4 bg-white">
           <h3 className="font-bold mb-3 text-primary">适用范围</h3>
@@ -322,9 +412,7 @@ export default function PublishForm() {
                     color: selectedGrades.includes(g) ? '#fff' : '#636e72',
                     border: `1px solid ${selectedGrades.includes(g) ? '#F5E6D0' : '#e0e0e0'}`
                   }}
-                >
-                  {g}
-                </div>
+                >{g}</div>
               ))}
             </div>
           </div>
@@ -340,15 +428,13 @@ export default function PublishForm() {
                     color: selectedMajors.includes('全专业通用') ? '#fff' : '#636e72',
                     border: `1px solid ${selectedMajors.includes('全专业通用') ? '#F5E6D0' : '#e0e0e0'}`
                   }}
-                >
-                  全专业通用
-                </div>
+                >全专业通用</div>
               </div>
-              {majorCategories.map(category => (
-                <div key={category.name} className="mb-3">
-                  <div className="text-xs font-semibold mb-1 text-gray-400">{category.name}</div>
+              {majorCategories.map(cat => (
+                <div key={cat.name} className="mb-3">
+                  <div className="text-xs font-semibold mb-1 text-gray-400">{cat.name}</div>
                   <div className="flex flex-wrap gap-2">
-                    {category.majors.map(m => (
+                    {cat.majors.map(m => (
                       <div
                         key={m}
                         onClick={() => toggleMajor(m)}
@@ -358,9 +444,7 @@ export default function PublishForm() {
                           color: selectedMajors.includes(m) ? '#fff' : '#636e72',
                           border: `1px solid ${selectedMajors.includes(m) ? '#F5E6D0' : '#e0e0e0'}`
                         }}
-                      >
-                        {m}
-                      </div>
+                      >{m}</div>
                     ))}
                   </div>
                 </div>
@@ -370,7 +454,53 @@ export default function PublishForm() {
         </div>
       )}
 
-      {/* 价格与成色 */}
+      {category === '备考资料' && (
+        <div className="rounded-card p-4 bg-white">
+          <h3 className="font-bold mb-3 text-primary">备考范围</h3>
+          <div className="mb-4">
+            <div className="text-sm mb-2 text-primary">考试类型</div>
+            <div className="flex flex-wrap gap-2">
+              {examTypes.map(t => (
+                <div
+                  key={t}
+                  onClick={() => { setExamType(t); setSelectedExamSubjects([]); }}
+                  className="px-4 py-2 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95"
+                  style={{
+                    background: examType === t ? '#F5E6D0' : '#fff',
+                    color: examType === t ? '#fff' : '#333',
+                    border: `1px solid ${examType === t ? '#F5E6D0' : '#e0e0e0'}`
+                  }}
+                >{t}</div>
+              ))}
+            </div>
+          </div>
+
+          {examType && examSubjectsData[examType] && (
+            <div className="max-h-80 overflow-y-auto">
+              {Object.entries(examSubjectsData[examType]).map(([group, subjects]) => (
+                <div key={group} className="mb-4">
+                  <div className="text-sm font-semibold mb-2 text-primary">{group}（可多选）</div>
+                  <div className="flex flex-wrap gap-2">
+                    {subjects.map(s => (
+                      <div
+                        key={s}
+                        onClick={() => toggleExamSubject(s)}
+                        className="px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95"
+                        style={{
+                          background: selectedExamSubjects.includes(s) ? '#F5E6D0' : '#f0f2f5',
+                          color: selectedExamSubjects.includes(s) ? '#fff' : '#636e72',
+                          border: `1px solid ${selectedExamSubjects.includes(s) ? '#F5E6D0' : '#e0e0e0'}`
+                        }}
+                      >{s}</div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="rounded-card p-4 bg-white">
         <h3 className="font-bold mb-3 text-primary">价格与成色</h3>
         <div className="space-y-3">
@@ -397,16 +527,13 @@ export default function PublishForm() {
                     color: condition === c ? '#fff' : '#333',
                     border: `1px solid ${condition === c ? '#F5E6D0' : '#e0e0e0'}`
                   }}
-                >
-                  {c}
-                </div>
+                >{c}</div>
               ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 联系方式 */}
       <div className="rounded-card p-4 bg-white">
         <h3 className="font-bold mb-3 text-primary">联系方式</h3>
         <div className="space-y-3">
