@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import '../styles/globals.css'
-import ErrorBoundary from '@/components/ErrorBoundary'
 
 export const metadata: Metadata = {
   title: '新校书仓 - 校园二手教材交易平台',
@@ -27,11 +26,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="新校书仓" />
       </head>
-      <body style={{ background: '#F2F2F7' }}>
-        <div style={{ maxWidth: '480px', margin: '0 auto', minHeight: '100vh', background: '#F2F2F7', boxShadow: '0 0 40px rgba(0,0,0,0.1)' }}>
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
+      <body className="bg-cream">
+        <div className="mx-auto max-w-[480px] min-h-screen bg-cream relative">
+          {children}
         </div>
       </body>
     </html>
