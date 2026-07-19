@@ -89,7 +89,7 @@ export default function DetailContent() {
     if (!book) return
     try { await supabase.from('books').update({ status: '已下架' }).eq('id', book.id); setBook({ ...book!, status: '已下架' }); setShowMore(false); showToast('success', '已下架') } catch { showToast('error', '操作失败') }
   }
-  const getAllImages = () => { if (!book) return []; if (book.images?.length > 0) return book.images.filter(i => i); return book.image_url ? [book.image_url] : [] }
+  const getAllImages = () => { if (!book) return []; if (book.images && book.images.length > 0) return book.images.filter(i => i); return book.image_url ? [book.image_url] : [] }
   const getWechat = () => book?.description?.match(/微信号：(.+?)[\n\r]/)?.[1]?.trim() || ''
   const getPhone = () => book?.description?.match(/联系电话：(.+?)[\n\r]/)?.[1]?.trim() || ''
 
