@@ -18,11 +18,13 @@ module.exports = {
           600: '#5D4E37',
         },
         warm: {
-          light: '#FBF8F3',
-          DEFAULT: '#F5E6D0',
-          dark: '#E0C9A8',
-          darker: '#C4A882',
-          text: '#5D4E37',
+          50: '#FBF8F3',
+          100: '#F5E6D0',
+          200: '#E0C9A8',
+          300: '#C4A882',
+          400: '#A68B6B',
+          500: '#8B6914',
+          600: '#5D4E37',
         },
         accent: {
           DEFAULT: '#ffa06f',
