@@ -1,674 +1,718 @@
-'use client'
+'use client';
 
-import { useEffect, useState, useCallback } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { usePhoneAuth } from '@/hooks/usePhoneAuth'
-import { getTimeAgo, getConditionColor, getCategoryTag } from '@/lib/utils'
-import AuthModal from '@/components/AuthModal'
+import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
 import {
-  Heart,
-  Share2,
   ChevronLeft,
-  X,
-  AlertTriangle,
-  User,
-  ChevronLeftCircle,
-  ChevronRightCircle,
   ChevronRight,
+  Heart,
   MoreHorizontal,
-  Pencil,
-  Trash2,
-  EyeOff,
-  PackageX,
-  Copy,
+  Share2,
+  MessageCircle,
   Phone,
-  MessageSquare,
+  Copy,
+  Check,
+  X,
+  Edit3,
+  Trash2,
+  Archive,
+  AlertCircle,
   BookOpen,
-  Clock,
   Tag,
-} from 'lucide-react'
+  Clock,
+  User,
+} from 'lucide-react';
+import { SkeletonCard } from '../../components/LoadingSpinner';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface BookDetail {
-  id: string
-  title: string
-  description: string
-  original_price: number | null
-  price: number
-  condition: string
-  category: string
-  grade: string
-  subject: string
-  image_url: string | null
-  isbn: string | null
-  author: string | null
-  publisher: string | null
-  user_id: string
-  status: string
-  created_at: string
-  wechat?: string
-  phone?: string
-  remark?: string
-  profiles?: {
-    nickname: string
-    avatar_url: string | null
-    school: string | null
-  }
+  id: string;
+  title: string;
+  price: number;
+  cover_url?: string;
+  images?: string[];
+  category?: string;
+  condition?: string;
+  isbn?: string;
+  author?: string;
+  publisher?: string;
+  grades?: string[];
+  majors?: string[];
+  material_type?: string;
+  exam_type?: string;
+  exam_subjects?: string[];
+  status?: string;
+  user_id: string;
+  created_at: string;
+  [key: string]: any;
 }
 
-export default function DetailContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const { user, loading: userLoading } = usePhoneAuth()
-  const id = searchParams.get('id')
-  const [book, setBook] = useState<BookDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isFavorite, setIsFavorite] = useState(false)
-  const [isbnCount, setIsbnCount] = useState(0)
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [showMoreMenu, setShowMoreMenu] = useState(false)
-  const [showImagePreview, setShowImagePreview] = useState(false)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [favoriteLoading, setFavoriteLoading] = useState(false)
+interface SellerInfo {
+  id: string;
+  nickname?: string;
+  avatar_url?: string;
+  wechat?: string;
+  phone?: string;
+}
 
-  useEffect(() => {
-    if (id && user !== undefined) {
-      loadData(id)
-    }
-  }, [id, user])
+interface DetailContentProps {
+  bookId: string;
+}
 
-  const loadData = async (bookId: string) => {
-    setLoading(true)
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}天前`;
+  return `${Math.floor(diff / 2592000)}月前`;
+}
+
+const conditionColorMap: Record<string, { bg: string; text: string }> = {
+  '全新': { bg: '#e8f5e9', text: '#2e7d32' },
+  '九成新': { bg: '#e3f2fd', text: '#1565c0' },
+  '八成新': { bg: '#fff3e0', text: '#e65100' },
+  '七成新': { bg: '#fce4ec', text: '#c62828' },
+  '六成新及以下': { bg: '#f3e5f5', text: '#6a1b9a' },
+};
+
+export default function DetailContent({ bookId }: DetailContentProps) {
+  const router = useRouter();
+  const [book, setBook] = useState<BookDetail | null>(null);
+  const [seller, setSeller] = useState<SellerInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [heartAnimating, setHeartAnimating] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const allImages = book?.images?.length
+    ? book.images
+    : book?.cover_url
+    ? [book.cover_url]
+    : [];
+
+  const fetchBookData = useCallback(async () => {
+    setLoading(true);
     try {
-      const bookResult = await supabase
+      const { data: bookData, error: bookError } = await supabase
         .from('books')
         .select('*')
         .eq('id', bookId)
-        .single()
+        .single();
+      if (bookError) throw bookError;
+      setBook(bookData);
 
-      const favResult = user
-        ? await supabase
-            .from('favorites')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('book_id', bookId)
-            .single()
-        : null
+      if (bookData?.user_id) {
+        const { data: sellerData } = await supabase
+          .from('profiles')
+          .select('id, nickname, avatar_url, wechat, phone')
+          .eq('id', bookData.user_id)
+          .single();
+        setSeller(sellerData);
 
-      if (bookResult.error) {
-        console.error('Error loading book:', bookResult.error)
-        setLoading(false)
-        return
-      }
-
-      if (bookResult.data) {
-        let profile = null
-        if (bookResult.data.user_id) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('nickname, avatar_url, school')
-            .eq('id', bookResult.data.user_id)
-            .single()
-          profile = profileData
-        }
-
-        const bookWithProfile = {
-          ...bookResult.data,
-          profiles: profile || { nickname: '匿名用户', avatar_url: null, school: null },
-        }
-
-        setBook(bookWithProfile as BookDetail)
-
-        if (bookResult.data.isbn) {
-          const { count } = await supabase
-            .from('books')
-            .select('*', { count: 'exact', head: true })
-            .eq('isbn', bookResult.data.isbn)
-            .eq('status', '在售')
-            .neq('id', bookId)
-          setIsbnCount(count || 0)
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user?.id === bookData.user_id) {
+          setIsOwner(true);
         }
       }
 
-      if (favResult && !favResult.error) {
-        setIsFavorite(true)
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        const { data: favData } = await supabase
+          .from('favorites')
+          .select('id')
+          .eq('user_id', userData.user.id)
+          .eq('book_id', bookId)
+          .maybeSingle();
+        setIsFavorited(!!favData);
       }
     } catch (err) {
-      console.error('Error:', err)
+      console.error('Failed to load book:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false)
-  }
+  }, [bookId]);
+
+  useEffect(() => {
+    fetchBookData();
+  }, [fetchBookData]);
 
   const toggleFavorite = async () => {
-    if (!user) {
-      setShowAuthModal(true)
-      return
-    }
-    if (!book || favoriteLoading) return
+    setHeartAnimating(true);
+    setTimeout(() => setHeartAnimating(false), 300);
 
-    setFavoriteLoading(true)
-    if (isFavorite) {
-      const { error } = await supabase
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      alert('请先登录');
+      return;
+    }
+
+    if (isFavorited) {
+      await supabase
         .from('favorites')
         .delete()
-        .eq('user_id', user.id)
-        .eq('book_id', book.id)
-      if (!error) {
-        setIsFavorite(false)
-      }
+        .eq('user_id', userData.user.id)
+        .eq('book_id', bookId);
+      setIsFavorited(false);
     } else {
-      const { error } = await supabase
+      await supabase
         .from('favorites')
-        .insert({ user_id: user.id, book_id: book.id })
-      if (!error) {
-        setIsFavorite(true)
-      }
+        .insert({ user_id: userData.user.id, book_id: bookId });
+      setIsFavorited(true);
     }
-    setFavoriteLoading(false)
-  }
+  };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: book?.title || '新校书仓商品',
-        text: `我在新校书仓发现了一本好书：${book?.title}，只要${book?.price}元`,
-        url: window.location.href,
-      })
-    } else {
-      navigator.clipboard?.writeText(window.location.href)
-    }
-  }
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    });
+  };
 
-  const copyWechat = () => {
-    if (book?.wechat) {
-      navigator.clipboard.writeText(book.wechat)
-    }
-  }
+  const handleMarkSold = async () => {
+    await supabase.from('books').update({ status: '已售出' }).eq('id', bookId);
+    setShowMoreMenu(false);
+    fetchBookData();
+  };
 
-  const callPhone = () => {
-    if (book?.phone) {
-      window.location.href = `tel:${book.phone}`
-    }
-  }
+  const handleDelist = async () => {
+    await supabase.from('books').update({ status: '已下架' }).eq('id', bookId);
+    setShowMoreMenu(false);
+    fetchBookData();
+  };
 
-  const handleMore = (action: string) => {
-    setShowMoreMenu(false)
-    if (action === 'edit') {
-      router.push(`/editItem?id=${book?.id}`)
-    } else if (action === 'sold') {
-      if (confirm('确定要标记为已售出吗？')) {
-        supabase.from('books').update({ status: '已售' }).eq('id', book?.id).then(() => {
-          router.refresh()
-        })
-      }
-    } else if (action === 'offline') {
-      if (confirm('确定要下架商品吗？')) {
-        supabase.from('books').update({ status: '已下架' }).eq('id', book?.id).then(() => {
-          router.push('/')
-        })
-      }
-    } else if (action === 'delete') {
-      if (confirm('确定要删除商品吗？此操作不可恢复')) {
-        supabase.from('books').delete().eq('id', book?.id).then(() => {
-          router.push('/')
-        })
-      }
-    }
-  }
+  const handleDelete = async () => {
+    if (!confirm('确定删除此商品？')) return;
+    await supabase.from('books').delete().eq('id', bookId);
+    router.push('/');
+  };
 
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : 0))
-  }
-
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev < 1 ? prev + 1 : prev))
-  }
+  const condStyle = book?.condition
+    ? conditionColorMap[book.condition] || { bg: '#f5f5f5', text: '#666' }
+    : null;
 
   if (loading) {
     return (
-      <div className="min-h-screen" style={{ background: '#F2F2F7' }}>
-        <div className="animate-fade-in">
-          <div className="h-[300px] skeleton" />
-          <div className="p-4 space-y-3">
-            <div className="h-8 w-32 skeleton rounded-lg" />
-            <div className="h-5 w-3/4 skeleton rounded-lg" />
-            <div className="flex gap-2">
-              <div className="h-6 w-16 skeleton rounded-full" />
-              <div className="h-6 w-16 skeleton rounded-full" />
-            </div>
-          </div>
-        </div>
+      <div style={{ padding: 16 }}>
+        <SkeletonCard />
+        <SkeletonCard index={1} />
       </div>
-    )
+    );
   }
 
   if (!book) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 py-20" style={{ background: '#F2F2F7' }}>
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'rgba(255,255,255,0.85)' }}>
-          <PackageX size={32} color="#999" />
-        </div>
-        <h2 className="text-xl font-semibold mb-2" style={{ color: '#1a1a1a' }}>商品不存在</h2>
-        <p className="text-sm mb-4" style={{ color: '#666' }}>该商品可能已被删除或下架</p>
-        <a href="/" className="btn-primary">返回首页</a>
+      <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
+        <AlertCircle size={32} />
+        <div style={{ marginTop: 12 }}>商品不存在或已删除</div>
       </div>
-    )
+    );
   }
 
-  const isMine = user?.id === book.user_id
-  const images = book.image_url ? [book.image_url] : []
-
   return (
-    <div className="pb-24" style={{ background: '#F2F2F7', minHeight: '100vh' }}>
-      {/* Back Button */}
-      <div className="fixed top-4 left-4 z-[60] max-w-[480px]">
+    <div style={{ minHeight: '100vh', background: '#F2F2F7', paddingBottom: 100 }}>
+      <style>{`
+        @keyframes heartPop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.3); }
+          100% { transform: scale(1); }
+        }
+        .heart-btn {
+          transition: transform 0.15s ease;
+        }
+        .heart-btn:active {
+          transform: scale(0.9);
+        }
+        .heart-anim {
+          animation: heartPop 0.3s ease-out;
+        }
+        .glass-fab {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.9);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(0,0,0,0.06);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: transform 0.15s ease;
+        }
+        .glass-fab:active {
+          transform: scale(0.9);
+        }
+        .detail-card {
+          background: rgba(255,255,255,0.85);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border-radius: 16px;
+          border: 1px solid rgba(0,0,0,0.04);
+          padding: 16px;
+          margin: 0 16px 12px;
+        }
+        .more-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.3);
+          z-index: 200;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          padding-bottom: 40px;
+        }
+        .more-sheet {
+          background: #fff;
+          border-radius: 20px 20px 0 0;
+          padding: 8px 0;
+          width: 100%;
+          max-width: 400px;
+          animation: sheetUp 0.25s ease-out;
+        }
+        @keyframes sheetUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .more-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 20px;
+          font-size: 15px;
+          color: #1a1a1a;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .more-item:active {
+          background: #f5f5f5;
+        }
+        .more-item.danger {
+          color: #E8590C;
+        }
+        .image-viewer {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 4/3;
+          background: #000;
+          border-radius: 0;
+          overflow: hidden;
+        }
+        .image-nav {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.8);
+          backdrop-filter: blur(8px);
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 10;
+        }
+        .image-counter {
+          position: absolute;
+          bottom: 12px;
+          right: 12px;
+          padding: 4px 10px;
+          border-radius: 12px;
+          background: rgba(0,0,0,0.5);
+          color: #fff;
+          font-size: 12px;
+          z-index: 10;
+        }
+      `}</style>
+
+      {/* Header */}
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 16px',
+          paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
+          background: 'linear-gradient(135deg, #5B8C5A, #4a7a49)',
+        }}
+      >
         <button
           onClick={() => router.back()}
-          className="w-10 h-10 rounded-full flex items-center justify-center"
           style={{
-            background: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            flexShrink: 0,
           }}
         >
-          <ChevronLeft size={20} color="#1a1a1a" />
+          <ChevronLeft size={20} color="#fff" />
         </button>
-      </div>
-
-      {/* Image Section */}
-      {book.image_url ? (
-        <div className="relative">
-          <img
-            src={book.image_url}
-            alt={book.title}
-            className="w-full h-[300px] object-cover"
-            onClick={() => setShowImagePreview(true)}
-          />
-          <div
-            className={`absolute top-3 left-3 text-white text-xs px-3 py-1 rounded-full font-medium ${getConditionColor(book.condition)}`}
-          >
-            {book.condition}
-          </div>
-        </div>
-      ) : (
-        <div
-          className="w-full h-[200px] flex items-center justify-center"
-          style={{ background: 'rgba(255,255,255,0.85)' }}
+        <span style={{ fontSize: 17, fontWeight: 600, color: '#fff', flex: 1 }}>
+          {book.title}
+        </span>
+        <button
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({ title: book.title, url: window.location.href });
+            }
+          }}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
         >
-          <BookOpen size={48} color="#C4A882" />
+          <Share2 size={18} color="#fff" />
+        </button>
+      </header>
+
+      {/* Image Viewer */}
+      {allImages.length > 0 && (
+        <div className="image-viewer">
+          <img
+            src={allImages[currentImageIndex]}
+            alt={book.title}
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+          {allImages.length > 1 && (
+            <>
+              {currentImageIndex > 0 && (
+                <button
+                  className="image-nav"
+                  style={{ left: 12 }}
+                  onClick={() => setCurrentImageIndex(i => i - 1)}
+                >
+                  <ChevronLeft size={18} color="#333" />
+                </button>
+              )}
+              {currentImageIndex < allImages.length - 1 && (
+                <button
+                  className="image-nav"
+                  style={{ right: 12 }}
+                  onClick={() => setCurrentImageIndex(i => i + 1)}
+                >
+                  <ChevronRight size={18} color="#333" />
+                </button>
+              )}
+              <div className="image-counter">
+                {currentImageIndex + 1}/{allImages.length}
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {/* Price & Title Card */}
-      <div
-        className="mx-4 -mt-4 relative rounded-2xl p-4 animate-slide-up"
-        style={{
-          background: 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(10px)',
-          border: '0.5px solid rgba(0,0,0,0.04)',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-        }}
-      >
-        <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-3xl font-bold" style={{ color: '#E8590C' }}>
-            ¥{book.price}
-          </span>
-          {book.original_price && (
-            <span className="text-sm line-through" style={{ color: '#999' }}>
-              原价 ¥{book.original_price}
-            </span>
-          )}
+      {/* Price + Tags */}
+      <div className="detail-card" style={{ marginTop: allImages.length > 0 ? 0 : 16 }}>
+        <div style={{ fontSize: 28, fontWeight: 700, color: '#E8590C', marginBottom: 10 }}>
+          &yen;{book.price}
         </div>
-        <h1 className="text-lg font-semibold" style={{ color: '#1a1a1a' }}>
-          {book.title}
-        </h1>
-        <div className="flex gap-2 mt-3 flex-wrap">
-          <span className={`tag ${getCategoryTag(book.category)}`}>{book.category}</span>
-          <span className="tag tag-success">{book.condition}</span>
-          {book.grade && <span className="tag tag-info">{book.grade}</span>}
-          {book.subject && <span className="tag tag-warning">{book.subject}</span>}
-        </div>
-        {book.isbn && isbnCount > 0 && (
-          <a
-            href={`/isbn?isbn=${book.isbn}`}
-            className="flex items-center gap-1 mt-3 text-sm font-medium"
-            style={{ color: '#E8590C' }}
-          >
-            查看同ISBN商品比价（{isbnCount}件在售）
-          </a>
-        )}
-      </div>
-
-      {/* Book Details Card */}
-      <div
-        className="mx-4 mt-2 rounded-2xl p-4 animate-slide-up"
-        style={{
-          background: 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(10px)',
-          border: '0.5px solid rgba(0,0,0,0.04)',
-        }}
-      >
-        <h2 className="font-semibold mb-3 flex items-center gap-2" style={{ color: '#1a1a1a' }}>
-          <Tag size={16} color="#C4A882" />
-          详细信息
-        </h2>
-        <div className="space-y-2.5 text-sm">
-          {book.isbn && (
-            <div className="flex justify-between">
-              <span style={{ color: '#666' }}>ISBN</span>
-              <span style={{ color: '#1a1a1a' }}>{book.isbn}</span>
-            </div>
-          )}
-          {book.author && (
-            <div className="flex justify-between">
-              <span style={{ color: '#666' }}>作者</span>
-              <span style={{ color: '#1a1a1a' }}>{book.author}</span>
-            </div>
-          )}
-          {book.publisher && (
-            <div className="flex justify-between">
-              <span style={{ color: '#666' }}>出版社</span>
-              <span style={{ color: '#1a1a1a' }}>{book.publisher}</span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span style={{ color: '#666' }}>发布时间</span>
-            <span className="flex items-center gap-1" style={{ color: '#1a1a1a' }}>
-              <Clock size={12} />
-              {getTimeAgo(book.created_at)}
-            </span>
-          </div>
-        </div>
-        {book.description && (
-          <div
-            className="mt-3 p-3 rounded-xl text-sm"
-            style={{ background: '#F2F2F7', color: '#666' }}
-          >
-            {book.description}
-          </div>
-        )}
-      </div>
-
-      {/* Safety Warning */}
-      <div
-        className="mx-4 mt-2 rounded-2xl p-4 flex items-start gap-3 animate-slide-up"
-        style={{ background: 'rgba(255,149,0,0.08)' }}
-      >
-        <AlertTriangle size={18} color="#E8590C" className="flex-shrink-0 mt-0.5" />
-        <div className="text-sm" style={{ color: '#666' }}>
-          <p className="font-medium" style={{ color: '#1a1a1a' }}>交易安全提醒</p>
-          <p className="mt-1">建议当面交易，核实商品后再付款。平台不承担私下交易产生的风险。</p>
-        </div>
-      </div>
-
-      {/* Seller Info Card */}
-      {book.profiles && (
-        <div
-          className="mx-4 mt-2 rounded-2xl p-4 animate-slide-up"
-          style={{
-            background: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(10px)',
-            border: '0.5px solid rgba(0,0,0,0.04)',
-          }}
-        >
-          <h2 className="font-semibold mb-3 flex items-center gap-2" style={{ color: '#1a1a1a' }}>
-            <User size={16} color="#C4A882" />
-            卖家信息
-          </h2>
-          <a
-            href={`/seller?id=${book.user_id}`}
-            className="flex items-center gap-3"
-          >
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {book.category && (
+            <span
               style={{
-                background: book.profiles.avatar_url
-                  ? 'transparent'
-                  : 'linear-gradient(135deg, #F5E6D0, #E0C9A8)',
+                fontSize: 12,
+                padding: '4px 10px',
+                borderRadius: 12,
+                background: '#5B8C5A',
+                color: '#fff',
+                fontWeight: 500,
               }}
             >
-              {book.profiles.avatar_url ? (
-                <img
-                  src={book.profiles.avatar_url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User size={20} color="#fff" />
-              )}
+              {book.category}
+            </span>
+          )}
+          {book.condition && condStyle && (
+            <span
+              style={{
+                fontSize: 12,
+                padding: '4px 10px',
+                borderRadius: 12,
+                background: condStyle.bg,
+                color: condStyle.text,
+                fontWeight: 500,
+              }}
+            >
+              {book.condition}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Title */}
+      <div className="detail-card">
+        <div style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.4 }}>
+          {book.title}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#999' }}>
+          <Clock size={12} />
+          <span>{timeAgo(book.created_at)}</span>
+        </div>
+      </div>
+
+      {/* Book Info */}
+      <div className="detail-card">
+        <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>
+          商品详情
+        </div>
+        {book.isbn && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+            <span style={{ fontSize: 14, color: '#999' }}>ISBN</span>
+            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.isbn}</span>
+          </div>
+        )}
+        {book.author && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+            <span style={{ fontSize: 14, color: '#999' }}>作者</span>
+            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.author}</span>
+          </div>
+        )}
+        {book.publisher && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+            <span style={{ fontSize: 14, color: '#999' }}>出版社</span>
+            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.publisher}</span>
+          </div>
+        )}
+        {book.grades && book.grades.length > 0 && (
+          <div style={{ padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+            <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>适用年级</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+              {book.grades.map((g: string) => (
+                <span key={g} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#f0f2f5', color: '#666' }}>
+                  {g}
+                </span>
+              ))}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium" style={{ color: '#1a1a1a' }}>
-                {book.profiles.nickname || '匿名用户'}
-              </div>
-              {book.profiles.school && (
-                <div className="text-xs" style={{ color: '#999' }}>
-                  {book.profiles.school}
+          </div>
+        )}
+        {book.majors && book.majors.length > 0 && (
+          <div style={{ padding: '8px 0' }}>
+            <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>适用专业</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+              {book.majors.map((m: string) => (
+                <span key={m} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#F5E6D0', color: '#8B6914' }}>
+                  {m}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {book.material_type && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+            <span style={{ fontSize: 14, color: '#999' }}>资料类型</span>
+            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.material_type}</span>
+          </div>
+        )}
+        {book.exam_type && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+            <span style={{ fontSize: 14, color: '#999' }}>适用考试</span>
+            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.exam_type}</span>
+          </div>
+        )}
+        {book.exam_subjects && book.exam_subjects.length > 0 && (
+          <div style={{ padding: '8px 0' }}>
+            <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>考试科目</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+              {book.exam_subjects.map((s: string) => (
+                <span key={s} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#f0f2f5', color: '#666' }}>
+                  {s}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Seller Card */}
+      {seller && (
+        <div className="detail-card">
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>
+            卖家信息
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: '#f0f2f5',
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}
+            >
+              {seller.avatar_url ? (
+                <img src={seller.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <User size={20} color="#ccc" />
                 </div>
               )}
             </div>
-            <ChevronRight size={16} color="#999" />
-          </a>
-
-          {/* Contact Buttons */}
-          <div className="flex gap-2 mt-3">
-            {book.wechat && (
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>
+                {seller.nickname || '匿名用户'}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {seller.wechat && (
               <button
-                onClick={copyWechat}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium"
+                onClick={() => handleCopy(seller.wechat!, 'wechat')}
                 style={{
-                  background: '#F2F2F7',
-                  color: '#1a1a1a',
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '10px 0',
+                  borderRadius: 12,
+                  border: '1px solid rgba(91,140,90,0.2)',
+                  background: 'rgba(91,140,90,0.05)',
+                  color: '#5B8C5A',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
                 }}
               >
-                <Copy size={14} />
-                微信: {book.wechat}
+                {copiedField === 'wechat' ? <Check size={14} /> : <Copy size={14} />}
+                {copiedField === 'wechat' ? '已复制' : '复制微信'}
               </button>
             )}
-            {book.phone && (
+            {seller.phone && (
               <button
-                onClick={callPhone}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium"
+                onClick={() => handleCopy(seller.phone!, 'phone')}
                 style={{
-                  background: '#F2F2F7',
-                  color: '#1a1a1a',
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '10px 0',
+                  borderRadius: 12,
+                  border: '1px solid rgba(91,140,90,0.2)',
+                  background: 'rgba(91,140,90,0.05)',
+                  color: '#5B8C5A',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
                 }}
               >
-                <Phone size={14} />
-                电话联系
+                {copiedField === 'phone' ? <Check size={14} /> : <Phone size={14} />}
+                {copiedField === 'phone' ? '已复制' : '复制手机号'}
               </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Bottom Bar */}
+      {/* Floating Favorite Button */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50"
         style={{
-          background: 'rgba(255,255,255,0.9)',
-          backdropFilter: 'blur(20px)',
-          borderTop: '0.5px solid rgba(0,0,0,0.06)',
-          paddingBottom: 'env(safe-area-inset-bottom, 12px)',
+          position: 'fixed',
+          left: 16,
+          bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+          zIndex: 150,
         }}
       >
-        <div className="max-w-[480px] mx-auto px-4 py-3 flex items-center gap-3">
-          {isMine ? (
-            <>
-              <button
-                onClick={toggleFavorite}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium transition-all card-interactive"
-                style={{
-                  background: isFavorite ? '#FFF0E6' : '#F2F2F7',
-                  color: isFavorite ? '#E8590C' : '#666',
-                }}
-              >
-                <Heart size={16} fill={isFavorite ? '#E8590C' : 'none'} />
-                {isFavorite ? '已收藏' : '收藏'}
-              </button>
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium transition-all card-interactive"
-                style={{ background: '#F2F2F7', color: '#666' }}
-              >
-                <Share2 size={16} />
-                分享
-              </button>
-              <button
-                onClick={() => router.push(`/editItem?id=${book.id}`)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full text-sm font-medium btn-primary"
-              >
-                <Pencil size={14} />
-                编辑商品
-              </button>
-              <button
-                onClick={() => setShowMoreMenu(true)}
-                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 card-interactive"
-                style={{ background: '#F2F2F7', color: '#666' }}
-              >
-                <MoreHorizontal size={18} />
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={toggleFavorite}
-                disabled={favoriteLoading}
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-medium transition-all card-interactive"
-                style={{
-                  background: isFavorite ? '#FFF0E6' : '#F2F2F7',
-                  color: isFavorite ? '#E8590C' : '#666',
-                }}
-              >
-                <Heart size={16} fill={isFavorite ? '#E8590C' : 'none'} />
-                {isFavorite ? '已收藏' : '收藏'}
-              </button>
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-medium transition-all card-interactive"
-                style={{ background: '#F2F2F7', color: '#666' }}
-              >
-                <Share2 size={16} />
-                分享
-              </button>
-            </>
-          )}
-        </div>
+        <button
+          className={`glass-fab heart-btn ${heartAnimating ? 'heart-anim' : ''}`}
+          onClick={toggleFavorite}
+        >
+          <Heart
+            size={24}
+            color={isFavorited ? '#E8590C' : '#999'}
+            fill={isFavorited ? '#E8590C' : 'none'}
+            strokeWidth={isFavorited ? 0 : 1.5}
+          />
+        </button>
       </div>
 
-      {/* More Menu Overlay */}
-      {showMoreMenu && (
+      {/* Owner Floating Button */}
+      {isOwner && (
         <div
-          className="fixed inset-0 z-[70] flex items-end justify-center"
-          onClick={() => setShowMoreMenu(false)}
-        >
-          <div className="absolute inset-0 bg-black/30" />
-          <div
-            className="relative w-full max-w-[480px] animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="mx-4 mb-4 rounded-2xl overflow-hidden"
-              style={{
-                background: 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(20px)',
-              }}
-            >
-              <button
-                onClick={() => handleMore('sold')}
-                className="w-full flex items-center gap-3 px-5 py-4 text-sm font-medium border-b"
-                style={{ color: '#1a1a1a', borderColor: 'rgba(0,0,0,0.06)' }}
-              >
-                <PackageX size={18} color="#E8590C" />
-                标记已售出
-              </button>
-              <button
-                onClick={() => handleMore('offline')}
-                className="w-full flex items-center gap-3 px-5 py-4 text-sm font-medium border-b"
-                style={{ color: '#1a1a1a', borderColor: 'rgba(0,0,0,0.06)' }}
-              >
-                <EyeOff size={18} color="#666" />
-                下架商品
-              </button>
-              <button
-                onClick={() => handleMore('delete')}
-                className="w-full flex items-center gap-3 px-5 py-4 text-sm font-medium"
-                style={{ color: '#FF3B30' }}
-              >
-                <Trash2 size={18} color="#FF3B30" />
-                删除商品
-              </button>
-            </div>
-            <button
-              onClick={() => setShowMoreMenu(false)}
-              className="mx-4 mb-4 w-[calc(100%-32px)] py-3 rounded-2xl text-sm font-medium"
-              style={{
-                background: 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(20px)',
-                color: '#1a1a1a',
-              }}
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Image Preview Overlay */}
-      {showImagePreview && images.length > 0 && (
-        <div
-          className="fixed inset-0 z-[80] flex flex-col items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.95)' }}
+          style={{
+            position: 'fixed',
+            right: 16,
+            bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+            zIndex: 150,
+          }}
         >
           <button
-            onClick={() => {
-              setShowImagePreview(false)
-              setCurrentImageIndex(0)
-            }}
-            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.15)' }}
+            className="glass-fab"
+            onClick={() => setShowMoreMenu(true)}
           >
-            <X size={20} color="#fff" />
+            <MoreHorizontal size={22} color="#666" />
           </button>
-
-          <div className="relative flex items-center justify-center w-full px-12">
-            {images.length > 1 && currentImageIndex > 0 && (
-              <button
-                onClick={prevImage}
-                className="absolute left-4 z-10"
-              >
-                <ChevronLeftCircle size={36} color="rgba(255,255,255,0.8)" />
-              </button>
-            )}
-            <img
-              src={images[currentImageIndex]}
-              alt=""
-              className="max-w-full max-h-[70vh] object-contain rounded-lg"
-            />
-            {images.length > 1 && currentImageIndex < images.length - 1 && (
-              <button
-                onClick={nextImage}
-                className="absolute right-4 z-10"
-              >
-                <ChevronRightCircle size={36} color="rgba(255,255,255,0.8)" />
-              </button>
-            )}
-          </div>
-
-          {images.length > 1 && (
-            <div className="mt-4 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              {currentImageIndex + 1} / {images.length}
-            </div>
-          )}
         </div>
       )}
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={() => router.refresh()}
-      />
+      {/* More Menu Sheet */}
+      {showMoreMenu && (
+        <div className="more-overlay" onClick={() => setShowMoreMenu(false)}>
+          <div className="more-sheet" onClick={e => e.stopPropagation()}>
+            {isOwner && (
+              <>
+                <div
+                  className="more-item"
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    router.push(`/publish?edit=${bookId}`);
+                  }}
+                >
+                  <Edit3 size={18} color="#5B8C5A" />
+                  编辑
+                </div>
+                <div className="more-item" onClick={handleMarkSold}>
+                  <Tag size={18} color="#5B8C5A" />
+                  标记已售出
+                </div>
+                <div className="more-item" onClick={handleDelist}>
+                  <Archive size={18} color="#666" />
+                  下架
+                </div>
+                <div className="more-item danger" onClick={handleDelete}>
+                  <Trash2 size={18} color="#E8590C" />
+                  删除
+                </div>
+              </>
+            )}
+            {!isOwner && (
+              <div className="more-item" onClick={() => setShowMoreMenu(false)}>
+                <X size={18} color="#666" />
+                关闭
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }
