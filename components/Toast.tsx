@@ -18,9 +18,9 @@ export function showToast(type: 'success' | 'error' | 'info', message: string) {
 export default function Toast() {
   const [toast, setToast] = useState<ToastProps>({ show: false, type: 'success', message: '' })
 
-  const handleShow = useCallback((e: CustomEvent<ToastProps>) => {
+  const handleShow = useCallback((e: CustomEvent<{ type: ToastProps['type']; message: string }>) => {
     if (toastTimer) clearTimeout(toastTimer)
-    setToast({ show: true, ...e.detail })
+    setToast({ show: true, type: e.detail.type, message: e.detail.message })
     toastTimer = setTimeout(() => {
       setToast((prev) => ({ ...prev, show: false }))
     }, 2000)
