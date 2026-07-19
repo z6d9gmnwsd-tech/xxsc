@@ -1,77 +1,51 @@
-import { Home, Plus, Heart, User } from 'lucide-react';
+'use client'
 
-interface BottomNavProps {
-  activeTab?: string;
-}
+import { usePathname } from 'next/navigation'
 
 const navItems = [
-  { id: 'home', label: '首页', icon: Home, href: '/' },
-  { id: 'publish', label: '发布', icon: Plus, isCenter: true, href: '/publish' },
-  { id: 'favorites', label: '收藏', icon: Heart, href: '/my/favorites' },
-  { id: 'profile', label: '我的', icon: User, href: '/my' },
-];
+  { key: 'home', href: '/', icon: '🏠', label: '首页' },
+  { key: 'publish', href: '/publish', icon: '📖', label: '卖书', highlight: true },
+  { key: 'favorites', href: '/my/favorites', icon: '⭐', label: '收藏' },
+  { key: 'my', href: '/my', icon: '👤', label: '我的' },
+]
 
-export default function BottomNav({ activeTab = 'home' }: BottomNavProps) {
+export default function BottomNav() {
+  const pathname = usePathname()
+
+  const getActiveKey = () => {
+    if (pathname === '/') return 'home'
+    if (pathname.startsWith('/publish')) return 'publish'
+    if (pathname.startsWith('/my/favorites')) return 'favorites'
+    if (pathname.startsWith('/my')) return 'my'
+    return 'home'
+  }
+
+  const activeKey = getActiveKey()
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50" style={{
-      background: 'rgba(255,255,255,0.85)',
-      backdropFilter: 'saturate(180%) blur(20px)',
-      WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-      borderTop: '0.5px solid rgba(0,0,0,0.08)',
-      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-    }}>
-      <div className="flex items-end justify-around max-w-[480px] mx-auto" style={{ paddingTop: 8, paddingBottom: 8 }}>
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] border-t z-50 bg-white"
+         style={{ borderColor: '#e0e0e0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex">
         {navItems.map((item) => {
-          if (item.isCenter) {
-            return (
-              <a
-                key={item.id}
-                href={item.href}
-                className="flex flex-col items-center justify-center"
-                style={{
-                  width: 56,
-                  height: 56,
-                  marginTop: -20,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 100%)',
-                  boxShadow: '0 4px 16px rgba(245,230,208,0.5)',
-                  color: '#5D4E37',
-                }}
-              >
-                <Plus size={26} strokeWidth={2.5} />
-              </a>
-            );
-          }
-
-          const isActive = activeTab === item.id;
-          const Icon = item.icon;
-
+          const isActive = activeKey === item.key
           return (
             <a
-              key={item.id}
+              key={item.key}
               href={item.href}
-              className="flex flex-col items-center justify-center py-1"
-              style={{
-                color: isActive ? '#8B6914' : '#999',
-                textDecoration: 'none',
-                minWidth: 60,
-              }}
+              className="flex-1 flex flex-col items-center py-2 touch-target active:scale-95 transition-transform duration-150"
+              style={{ color: isActive ? '#ffa06f' : '#999999' }}
             >
-              <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
-              <span style={{ fontSize: 10, marginTop: 2, fontWeight: isActive ? 600 : 400 }}>{item.label}</span>
+              <span className={`text-xl ${item.highlight && !isActive ? 'opacity-80' : ''}`}>
+                {item.icon}
+              </span>
+              <span className="text-xs mt-1 font-medium">{item.label}</span>
               {isActive && (
-                <div style={{
-                  width: 16,
-                  height: 2,
-                  borderRadius: 1,
-                  background: '#8B6914',
-                  marginTop: 2,
-                }} />
+                <div className="absolute bottom-0 w-6 h-0.5 rounded-full bg-accent" />
               )}
             </a>
-          );
+          )
         })}
       </div>
-    </nav>
-  );
+    </div>
+  )
 }
