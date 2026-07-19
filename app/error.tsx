@@ -1,7 +1,5 @@
 'use client';
 
-import { AlertCircle } from 'lucide-react';
-
 interface ErrorPageProps {
   error: Error & { digest?: string };
   reset: () => void;
@@ -9,73 +7,18 @@ interface ErrorPageProps {
 
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 24,
-      background: '#F2F2F7',
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: 360,
-        background: 'rgba(255,255,255,0.85)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: 16,
-        padding: '40px 24px',
-        textAlign: 'center',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-      }}>
-        <div style={{
-          width: 80,
-          height: 80,
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #F5E6D0, #E0C9A8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 20px',
-        }}>
-          <AlertCircle size={36} color="#8B6914" />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-cream">
+      <div className="w-full max-w-[360px] bg-white/85 backdrop-blur-sm rounded-card p-10 text-center shadow-card animate-fade-in">
+        <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center mx-auto mb-5">
+          <span className="text-4xl">⚠️</span>
         </div>
-        <h2 style={{
-          fontSize: 18,
-          fontWeight: 600,
-          color: '#1a1a1a',
-          margin: '0 0 12px',
-        }}>
-          页面出现异常
-        </h2>
+        <h2 className="text-lg font-semibold text-primary mb-3">页面出现异常</h2>
         {error?.message && (
-          <p style={{
-            fontSize: 13,
-            color: '#666',
-            margin: '0 0 24px',
-            lineHeight: 1.5,
-            wordBreak: 'break-all',
-          }}>
-            {error.message}
-          </p>
+          <p className="text-sm text-gray-500 mb-6 leading-relaxed break-all">{error.message}</p>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <button
-            onClick={reset}
-            className="btn-primary"
-            style={{ width: '100%' }}
-          >
-            重试
-          </button>
-          <a
-            href="/"
-            style={{
-              fontSize: 14,
-              color: '#8B6914',
-              textDecoration: 'none',
-            }}
-          >
-            返回首页
-          </a>
+        <div className="flex flex-col gap-3">
+          <button onClick={reset} className="btn-primary w-full">重试</button>
+          <a href="/" className="text-sm text-warm-500 no-underline">返回首页</a>
         </div>
       </div>
     </div>
