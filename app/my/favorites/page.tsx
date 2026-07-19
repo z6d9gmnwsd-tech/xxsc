@@ -12,7 +12,7 @@ import BackButton from '@/components/BackButton'
 import { Book } from '@/types'
 
 export default function FavoritesPage() {
-  const { user } = usePhoneAuth()
+  const { user, loading } = usePhoneAuth()
   const router = useRouter()
 
   const fetcher = async () => {
@@ -41,8 +41,17 @@ export default function FavoritesPage() {
   )
 
   useEffect(() => {
+    if (loading) return
     if (!user) router.push('/my')
-  }, [user])
+  }, [user, loading])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="inline-block w-8 h-8 border-2 border-warm-200 border-t-accent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="pb-20">
