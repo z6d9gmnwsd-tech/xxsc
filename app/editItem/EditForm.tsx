@@ -11,9 +11,9 @@ import { showToast } from '@/components/Toast'
 export default function EditForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user } = usePhoneAuth()
+  const { user, loading } = usePhoneAuth()
   const id = searchParams.get('id')
-  const [loading, setLoading] = useState(true)
+  const [loadingData, setLoadingData] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const [title, setTitle] = useState('')
@@ -26,12 +26,13 @@ export default function EditForm() {
   const [description, setDescription] = useState('')
 
   useEffect(() => {
+    if (loading) return
     if (!id) {
-      setLoading(false)
+      setLoadingData(false)
       return
     }
     loadBook()
-  }, [id])
+  }, [id, loading])
 
   const loadBook = async () => {
     if (!id) return
@@ -56,13 +57,17 @@ export default function EditForm() {
       setCondition(data.condition || '九成新')
       setDescription(data.description || '')
     }
-    setLoading(false)
+    setLoadingData(false)
   }
 
   const handleSave = async () => {
     if (!id || !user) return
     if (!title.trim()) {
       showToast('error', '请输入书名')
+      return
+    }
+    if (!isbn.trim()) {
+      showToast('error', '请填写ISBN')
       return
     }
     if (!price || parseFloat(price) <= 0) {
@@ -96,7 +101,7 @@ export default function EditForm() {
     setTimeout(() => router.push(`/detail?id=${id}`), 1500)
   }
 
-  if (loading) return <LoadingSpinner />
+  if (loading || loadingData) return <LoadingSpinner />
 
   return (
     <div className="pb-20">
@@ -118,7 +123,7 @@ export default function EditForm() {
               <input className="flex-1 input" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="flex items-center gap-3">
-              <span className="w-16 text-sm text-primary flex-shrink-0">ISBN</span>
+              <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> ISBN</span>
               <input className="flex-1 input" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
             </div>
             <div className="flex items-center gap-3">
