@@ -1,79 +1,85 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './lib/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#5B8C5A',
-          dark: '#40916C',
-          light: '#74C37D',
+        cream: {
+          50: '#FBF8F3',
+          100: '#F5E6D0',
+          200: '#E0C9A8',
+          300: '#C4A882',
+          400: '#A68B6B',
+          500: '#8B6914',
+          600: '#5D4E37',
         },
-        secondary: {
+        warm: {
+          light: '#FBF8F3',
           DEFAULT: '#F5E6D0',
           dark: '#E0C9A8',
           darker: '#C4A882',
+          text: '#5D4E37',
         },
-        neutral: {
-          900: '#333333',
-          700: '#666666',
-          500: '#999999',
-          300: '#E5E5E5',
-          200: '#F0F0F0',
+        accent: {
+          DEFAULT: '#ffa06f',
+          dark: '#E58A5A',
         },
-        bg: '#F2F2F7',
-        price: '#E8590C',
+      },
+      backgroundColor: {
+        'cream': '#FBF8F3',
+        'card': 'rgba(255, 255, 255, 0.95)',
+      },
+      textColor: {
+        'primary': '#333333',
+        'secondary': '#666666',
+        'light': '#999999',
+      },
+      borderColor: {
+        'cream': '#E0D5C8',
       },
       borderRadius: {
-        sm: '8px',
-        card: '12px',
-        button: '8px',
-        pill: '50px',
+        'card': '1rem',
+        'button': '2rem',
       },
-      fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'PingFang SC', 'Helvetica Neue', 'sans-serif'],
+      boxShadow: {
+        'card': '0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03)',
+        'card-hover': '0 4px 16px rgba(0, 0, 0, 0.08)',
+        'button': '0 2px 8px rgba(0, 0, 0, 0.08)',
       },
       animation: {
-        'fade-in': 'fadeIn 0.3s ease-out forwards',
-        'slide-up': 'slideUp 0.3s ease-out forwards',
-        'slide-down': 'slideDown 0.3s ease-out forwards',
-        'scale-in': 'scaleIn 0.3s ease-out forwards',
-        'bounce-in': 'bounceIn 0.5s ease-out forwards',
-        'shimmer': 'shimmer 1.8s ease-in-out infinite',
+        'fade-in': 'fadeIn 0.3s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'slide-down': 'slideDown 0.3s ease-out',
+        'scale-in': 'scaleIn 0.2s ease-out',
+        'pulse-warm': 'pulseWarm 1.5s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         slideUp: {
-          from: { opacity: '0', transform: 'translateY(20px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         slideDown: {
-          from: { opacity: '0', transform: 'translateY(-20px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
+          '0%': { opacity: '0', transform: 'translateY(-20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         scaleIn: {
-          from: { opacity: '0', transform: 'scale(0.9)' },
-          to: { opacity: '1', transform: 'scale(1)' },
-        },
-        bounceIn: {
-          '0%': { opacity: '0', transform: 'scale(0.3)' },
-          '50%': { transform: 'scale(1.05)' },
-          '70%': { transform: 'scale(0.9)' },
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
-        shimmer: {
-          '0%': { backgroundPosition: '100% 50%' },
-          '100%': { backgroundPosition: '0% 50%' },
+        pulseWarm: {
+          '0%, 100%': { opacity: '0.4' },
+          '50%': { opacity: '0.8' },
         },
       },
     },
   },
   plugins: [],
-};
+}
