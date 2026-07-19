@@ -1,119 +1,231 @@
 'use client';
 
-import { BookOpen } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface BookCardProps {
-  id: string;
-  title: string;
-  price: number;
-  originalPrice?: number;
-  condition: string;
-  thumbnail?: string;
-  tags?: string[];
+  book: {
+    id: string;
+    title: string;
+    price: number;
+    cover_url?: string;
+    category?: string;
+    condition?: string;
+    created_at: string;
+    [key: string]: any;
+  };
   index?: number;
   onClick?: () => void;
 }
 
-const conditionMap: Record<string, { label: string; class: string }> = {
-  '全新': { label: '全新', class: 'condition-badge-new' },
-  '九成新': { label: '九成新', class: 'condition-badge-90' },
-  '八成新': { label: '八成新', class: 'condition-badge-80' },
-  '七成新': { label: '七成新及以下', class: 'condition-badge-low' },
-  '七成新及以下': { label: '七成新及以下', class: 'condition-badge-low' },
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}天前`;
+  if (diff < 31536000) return `${Math.floor(diff / 2592000)}月前`;
+  return `${Math.floor(diff / 31536000)}年前`;
+}
+
+const conditionColorMap: Record<string, { bg: string; text: string }> = {
+  '全新': { bg: '#e8f5e9', text: '#2e7d32' },
+  '九成新': { bg: '#e3f2fd', text: '#1565c0' },
+  '八成新': { bg: '#fff3e0', text: '#e65100' },
+  '七成新': { bg: '#fce4ec', text: '#c62828' },
+  '六成新及以下': { bg: '#f3e5f5', text: '#6a1b9a' },
 };
 
-const tagColors: Record<string, string> = {
-  '教材': 'tag-primary',
-  '备考资料': 'tag-info',
-  '考研': 'tag-info',
-  '四六级': 'tag-warning',
-  '计算机': 'tag-success',
-  '文学': 'tag-secondary',
-  '工具书': 'tag-secondary',
-};
+export default function BookCard({ book, index = 0, onClick }: BookCardProps) {
+  const condStyle = useMemo(() => {
+    return conditionColorMap[book.condition || ''] || { bg: '#f5f5f5', text: '#666' };
+  }, [book.condition]);
 
-export default function BookCard({
-  title,
-  price,
-  condition,
-  thumbnail,
-  tags = [],
-  index = 0,
-  onClick,
-}: BookCardProps) {
-  const condInfo = conditionMap[condition] || { label: condition, class: 'condition-badge-low' };
-  const displayTags = tags.slice(0, 2);
+  const animStyle = useMemo(() => ({
+    animation: `bookCardIn 0.35s ease-out ${index * 60}ms both`,
+  }), [index]);
 
   return (
-    <div
-      className="card card-interactive"
-      style={{
-        padding: 10,
-        animationDelay: `${index * 60}ms`,
-      }}
-      onClick={onClick}
-    >
-      <div className="flex gap-3">
-        {/* Thumbnail */}
-        <div className="relative flex-shrink-0">
-          {thumbnail ? (
-            <img
-              src={thumbnail}
-              alt={title}
-              className="rounded-lg object-cover"
-              style={{ width: 120, height: 90 }}
-            />
-          ) : (
-            <div
-              className="flex items-center justify-center rounded-lg"
+    <>
+      <style>{`
+        @keyframes bookCardIn {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .book-card:active {
+          transform: scale(0.97) !important;
+        }
+      `}</style>
+      <div
+        className="book-card"
+        onClick={onClick}
+        style={{
+          display: 'flex',
+          gap: 10,
+          padding: 10,
+          marginBottom: 10,
+          borderRadius: 12,
+          background: 'rgba(255,255,255,0.85)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(0,0,0,0.04)',
+          cursor: 'pointer',
+          transition: 'transform 0.15s ease',
+          position: 'relative',
+          ...animStyle,
+        }}
+      >
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div
+            style={{
+              width: 120,
+              height: 90,
+              borderRadius: 8,
+              overflow: 'hidden',
+              background: '#f0f2f5',
+            }}
+          >
+            {book.cover_url ? (
+              <img
+                src={book.cover_url}
+                alt={book.title}
+                loading="lazy"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ccc',
+                  fontSize: 24,
+                }}
+              >
+                &#x1F4D6;
+              </div>
+            )}
+          </div>
+          {book.condition && (
+            <span
               style={{
-                width: 120,
-                height: 90,
-                background: 'linear-gradient(135deg, #5B8C5A, #40916C)',
+                position: 'absolute',
+                top: 4,
+                left: 4,
+                fontSize: 10,
+                padding: '2px 6px',
+                borderRadius: 6,
+                background: condStyle.bg,
+                color: condStyle.text,
+                fontWeight: 500,
+                lineHeight: '14px',
               }}
             >
-              <BookOpen size={28} color="#FFFFFF" strokeWidth={1.5} />
-            </div>
+              {book.condition}
+            </span>
           )}
-          {/* Condition Badge */}
-          <span className={`condition-badge ${condInfo.class}`}>
-            {condInfo.label}
-          </span>
         </div>
 
-        {/* Content */}
-        <div className="flex flex-1 flex-col justify-between min-w-0 py-0.5">
-          {/* Title */}
-          <h3
-            className="font-medium text-sm leading-snug truncate"
-            style={{ color: '#333333', fontWeight: 500 }}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: 6,
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 500,
+              color: '#1a1a1a',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.3,
+            }}
           >
-            {title}
-          </h3>
+            {book.title}
+          </div>
 
-          {/* Tags */}
-          {displayTags.length > 0 && (
-            <div className="flex gap-1.5 flex-wrap mt-1">
-              {displayTags.map((tag) => (
-                <span
-                  key={tag}
-                  className={`tag ${tagColors[tag] || 'tag-secondary'}`}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflow: 'hidden' }}>
+            {book.category && (
+              <span
+                className="tag tag-primary"
+                style={{
+                  fontSize: 10,
+                  padding: '2px 8px',
+                  borderRadius: 8,
+                  background: '#5B8C5A',
+                  color: '#fff',
+                  flexShrink: 0,
+                  lineHeight: '14px',
+                }}
+              >
+                {book.category}
+              </span>
+            )}
+            {book.condition && (
+              <span
+                className="tag tag-secondary"
+                style={{
+                  fontSize: 10,
+                  padding: '2px 8px',
+                  borderRadius: 8,
+                  background: '#F5E6D0',
+                  color: '#8B6914',
+                  flexShrink: 0,
+                  lineHeight: '14px',
+                }}
+              >
+                {book.condition}
+              </span>
+            )}
+          </div>
 
-          {/* Price */}
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className="price-tag price-tag-sm">
-              <span className="currency">¥</span>
-              <span className="amount">{price.toFixed(2)}</span>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                color: '#E8590C',
+                lineHeight: 1,
+              }}
+            >
+              &yen;{book.price}
+            </span>
+            <span
+              style={{
+                fontSize: 11,
+                color: '#bbb',
+                flexShrink: 0,
+              }}
+            >
+              {timeAgo(book.created_at)}
             </span>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
