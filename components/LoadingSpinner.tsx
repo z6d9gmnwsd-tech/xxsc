@@ -1,4 +1,4 @@
-export function SkeletonCard() {
+export function SkeletonCard({ index }: { index?: number }) {
   return (
     <div style={{ padding: '0 16px' }}>
       {[1, 2, 3].map((i) => (
