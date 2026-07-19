@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import BackButton from '@/components/BackButton'
+import BottomNav from '@/components/BottomNav'
 import {
   Pencil,
   Camera,
@@ -431,7 +432,7 @@ function EditItemContent() {
 
 export default function EditItemPage() {
   return (
-    <div style={{ background: '#F2F2F7', minHeight: '100vh' }}>
+    <div className="pb-20" style={{ background: '#F2F2F7', minHeight: '100vh' }}>
       <div
         className="header-glass px-4 py-6 text-white"
         style={{
@@ -450,6 +451,7 @@ export default function EditItemPage() {
       <Suspense fallback={<EditItemSkeleton />}>
         <EditItemContent />
       </Suspense>
+      <BottomNav activeTab="profile" />
     </div>
   )
 }
