@@ -82,7 +82,7 @@ export default function MyPage() {
         </div>
       )}
 
-      <BottomNav activePage="my" />
+      <BottomNav activeTab="profile" />
       
       <AuthModal
         isOpen={showAuthModal}
