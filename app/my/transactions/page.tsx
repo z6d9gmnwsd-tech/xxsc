@@ -115,7 +115,7 @@ export default function TransactionsPage() {
           </div>
         </div>
         <TransactionsSkeleton />
-        <BottomNav activePage="my" />
+        <BottomNav activeTab="profile" />
       </div>
     )
   }
@@ -235,7 +235,7 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      <BottomNav activePage="my" />
+      <BottomNav activeTab="profile" />
     </div>
   )
 }
