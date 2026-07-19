@@ -1,419 +1,441 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import {
-  BookOpen,
-  FileText,
-  Camera,
-  Upload,
-  X,
-  Check,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
-import Disclaimer from '../../components/Disclaimer';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-type GoodsType = '教材' | '备考资料';
-type MaterialType = '讲义' | '笔记' | '真题' | '其他';
-type ExamType = '考研' | '考公考编' | '其他';
-
-const GRADE_OPTIONS = ['全年级通用', '大一', '大二', '大三', '大四', '研一', '研二', '研三'];
-
-const MAJOR_CATEGORIES: Record<string, string[]> = {
-  '工学': ['计算机科学与技术', '软件工程', '电子信息工程', '通信工程', '自动化', '机械工程', '土木工程', '建筑学'],
-  '理学': ['数学', '物理学', '化学', '生物学', '统计学'],
-  '文学': ['中国语言文学', '外国语言文学', '新闻传播学', '艺术学'],
-  '经济学': ['经济学', '金融学', '国际贸易', '会计学', '工商管理'],
-  '法学': ['法学', '政治学', '社会学', '马克思主义理论'],
-  '医学': ['临床医学', '口腔医学', '药学', '护理学', '中医学'],
-  '教育学': ['教育学', '学前教育', '小学教育', '体育学'],
-  '农学': ['农学', '林学', '动物医学', '水产'],
-};
-
-const EXAM_SUBJECTS: Record<string, string[]> = {
-  '考研': ['政治', '英语一', '英语二', '数学一', '数学二', '数学三', '专业课'],
-  '考公考编': ['行测', '申论', '公共基础知识', '专业知识'],
-  '其他': [],
-};
-
-interface ToastProps {
-  message: string;
-  type: 'success' | 'error' | 'info';
-  onClose: () => void;
-}
-
-function Toast({ message, type, onClose }: ToastProps) {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 2500);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  const iconMap = {
-    success: <Check size={16} color="#fff" />,
-    error: <X size={16} color="#fff" />,
-    info: <AlertCircle size={16} color="#fff" />,
-  };
-  const bgMap = {
-    success: '#5B8C5A',
-    error: '#E8590C',
-    info: '#666',
-  };
-
-  return (
-    <div style={{
-      position: 'fixed', top: 60, left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
-      display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 24,
-      background: bgMap[type], color: '#fff', fontSize: 14, fontWeight: 500,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.15)', animation: 'toastIn 0.3s ease-out',
-    }}>
-      {iconMap[type]}{message}
-      <style>{`@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }`}</style>
-    </div>
-  );
-}
-
-interface FieldError { field: string; message: string; }
-
-interface FormData {
-  goodsType: GoodsType;
-  isbn: string;
-  title: string;
-  condition: string;
-  author: string;
-  publisher: string;
-  grades: string[];
-  majors: string[];
-  images: string[];
-  materialType: MaterialType;
-  examType: ExamType;
-  examSubjects: string[];
-}
-
-const INITIAL_FORM: FormData = {
-  goodsType: '教材', isbn: '', title: '', condition: '', author: '', publisher: '',
-  grades: [], majors: [], images: [], materialType: '讲义', examType: '考研', examSubjects: [],
-};
-
-const CONDITION_OPTIONS = ['全新', '九成新', '八成新', '七成新', '六成新及以下'];
-const MATERIAL_TYPE_OPTIONS: MaterialType[] = ['讲义', '笔记', '真题', '其他'];
-const EXAM_TYPE_OPTIONS: ExamType[] = ['考研', '考公考编', '其他'];
-const DRAFT_KEY = 'bookcraft_draft';
+import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { usePhoneAuth } from '@/hooks/usePhoneAuth'
+import { useRouter } from 'next/navigation'
+import { showToast } from '@/components/Toast'
 
 export default function PublishForm() {
-  const [form, setForm] = useState<FormData>(INITIAL_FORM);
-  const [toast, setToast] = useState<ToastProps | null>(null);
-  const [errors, setErrors] = useState<FieldError[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [majorExpanded, setMajorExpanded] = useState(false);
-  const [gradeExpanded, setGradeExpanded] = useState(false);
-  const draftTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = usePhoneAuth()
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      if (saved) setForm({ ...INITIAL_FORM, ...JSON.parse(saved) });
-    } catch {}
-  }, []);
+  const [title, setTitle] = useState('')
+  const [isbn, setIsbn] = useState('')
+  const [author, setAuthor] = useState('')
+  const [publisher, setPublisher] = useState('')
+  const [price, setPrice] = useState('')
+  const [originalPrice, setOriginalPrice] = useState('')
+  const [condition, setCondition] = useState('九成新')
+  const [category, setCategory] = useState('教材')
+  const [wechat, setWechat] = useState('')
+  const [phone, setPhone] = useState('')
+  const [remark, setRemark] = useState('')
+  const [images, setImages] = useState<string[]>([])
+  const [selectedGrades, setSelectedGrades] = useState<string[]>(['全年级通用'])
+  const [selectedMajors, setSelectedMajors] = useState<string[]>(['全专业通用'])
 
-  const saveDraft = useCallback((data: FormData) => {
-    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
-    draftTimerRef.current = setTimeout(() => {
-      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch {}
-    }, 500);
-  }, []);
+  const grades = ['全年级通用', '大一', '大二', '大三', '大四', '研一', '研二', '研三']
 
-  const updateForm = (patch: Partial<FormData>) => {
-    setForm(prev => { const next = { ...prev, ...patch }; saveDraft(next); return next; });
-    setErrors([]);
-  };
+  const majorCategories = [
+    { name: '哲学', majors: ['哲学', '逻辑学', '宗教学'] },
+    { name: '经济学', majors: ['经济学', '经济统计学', '金融学', '国际经济与贸易', '会计学', '财务管理'] },
+    { name: '法学', majors: ['法学', '社会学', '社会工作', '政治学与行政学'] },
+    { name: '教育学', majors: ['教育学', '学前教育', '小学教育', '体育教育', '心理学'] },
+    { name: '文学', majors: ['汉语言文学', '英语', '日语', '新闻学', '传播学'] },
+    { name: '历史学', majors: ['历史学', '考古学'] },
+    { name: '理学', majors: ['数学与应用数学', '物理学', '化学', '生物科学', '统计学'] },
+    { name: '工学', majors: ['机械工程', '电气工程', '计算机科学', '软件工程', '土木工程', '建筑学'] },
+    { name: '农学', majors: ['农学', '园艺', '动物科学', '林学'] },
+    { name: '医学', majors: ['临床医学', '口腔医学', '中医学', '护理学', '药学'] },
+    { name: '管理学', majors: ['工商管理', '市场营销', '会计学', '财务管理', '人力资源管理'] },
+    { name: '艺术学', majors: ['艺术设计', '音乐学', '美术学', '动画'] },
+  ]
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info') => {
-    setToast({ message, type, onClose: () => setToast(null) });
-  };
+  const toggleGrade = (grade: string) => {
+    if (grade === '全年级通用') {
+      setSelectedGrades(['全年级通用'])
+    } else {
+      let newGrades = selectedGrades.filter(g => g !== '全年级通用')
+      if (newGrades.includes(grade)) {
+        newGrades = newGrades.filter(g => g !== grade)
+      } else {
+        newGrades.push(grade)
+      }
+      setSelectedGrades(newGrades.length === 0 ? ['全年级通用'] : newGrades)
+    }
+  }
+
+  const toggleMajor = (major: string) => {
+    if (major === '全专业通用') {
+      setSelectedMajors(['全专业通用'])
+    } else {
+      let newMajors = selectedMajors.filter(m => m !== '全专业通用')
+      if (newMajors.includes(major)) {
+        newMajors = newMajors.filter(m => m !== major)
+      } else {
+        newMajors.push(major)
+      }
+      setSelectedMajors(newMajors.length === 0 ? ['全专业通用'] : newMajors)
+    }
+  }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    if (form.images.length + files.length > 5) { showToast('最多上传5张图片', 'error'); return; }
-    setUploading(true);
-    try {
-      const newUrls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const ext = file.name.split('.').pop() || 'jpg';
-        const path = `book-covers/${Date.now()}_${i}.${ext}`;
-        const { error } = await supabase.storage.from('book-images').upload(path, file, { cacheControl: '3600', upsert: false });
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from('book-images').getPublicUrl(path);
-        newUrls.push(urlData.publicUrl);
-      }
-      updateForm({ images: [...form.images, ...newUrls] });
-      showToast('上传成功', 'success');
-    } catch (err: any) {
-      showToast(err.message || '上传失败', 'error');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const remainingSlots = 5 - images.length
+    const filesToUpload = Array.from(files).slice(0, remainingSlots)
+
+    if (filesToUpload.length === 0) {
+      showToast('error', '最多只能上传5张图片')
+      return
     }
-  };
 
-  const removeImage = (index: number) => updateForm({ images: form.images.filter((_, i) => i !== index) });
-  const toggleGrade = (g: string) => updateForm({ grades: form.grades.includes(g) ? form.grades.filter(x => x !== g) : [...form.grades, g] });
-  const toggleMajor = (m: string) => updateForm({ majors: form.majors.includes(m) ? form.majors.filter(x => x !== m) : [...form.majors, m] });
-  const toggleExamSubject = (s: string) => updateForm({ examSubjects: form.examSubjects.includes(s) ? form.examSubjects.filter(x => x !== s) : [...form.examSubjects, s] });
+    setUploading(true)
 
-  const validate = (): FieldError[] => {
-    const errs: FieldError[] = [];
-    if (form.goodsType === '教材') {
-      if (!form.isbn.trim()) errs.push({ field: 'isbn', message: '请填写ISBN' });
-      if (!form.title.trim()) errs.push({ field: 'title', message: '请填写书名' });
-      if (!form.condition) errs.push({ field: 'condition', message: '请选择成色' });
-    } else {
-      if (!form.title.trim()) errs.push({ field: 'title', message: '请填写书名' });
-      if (!form.condition) errs.push({ field: 'condition', message: '请选择成色' });
-    }
-    return errs;
-  };
-
-  const handleSubmit = async () => {
-    const errs = validate();
-    if (errs.length > 0) { setErrors(errs); showToast('请填写所有必填项', 'error'); return; }
-    setSubmitting(true);
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) { showToast('请先登录', 'error'); return; }
-      const insertData: Record<string, any> = {
-        user_id: userData.user.id, title: form.title.trim(), condition: form.condition,
-        category: form.goodsType, price: 0, status: '在售', images: form.images,
-      };
-      if (form.goodsType === '教材') {
-        insertData.isbn = form.isbn.trim(); insertData.author = form.author.trim();
-        insertData.publisher = form.publisher.trim(); insertData.grades = form.grades; insertData.majors = form.majors;
-      } else {
-        insertData.material_type = form.materialType; insertData.exam_type = form.examType; insertData.exam_subjects = form.examSubjects;
+    for (const file of filesToUpload) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('error', '图片大小不能超过5MB')
+        setUploading(false)
+        return
       }
-      const { error } = await supabase.from('books').insert(insertData);
-      if (error) throw error;
-      localStorage.removeItem(DRAFT_KEY);
-      showToast('发布成功', 'success');
-      setTimeout(() => { window.location.href = '/'; }, 1200);
-    } catch (err: any) {
-      showToast(err.message || '发布失败', 'error');
-    } finally { setSubmitting(false); }
-  };
 
-  const RequiredStar = () => <span style={{ color: '#E8590C', marginRight: 4 }}>*</span>;
-  const getErrorFor = (field: string) => errors.find(e => e.field === field);
-  const renderFieldLabel = (label: string, required = false) => (
-    <div style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a', marginBottom: 8 }}>
-      {required && <RequiredStar />}{label}
-    </div>
-  );
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('book-images')
+        .upload(fileName, file)
+
+      if (uploadError) {
+        showToast('error', '图片上传失败')
+        setUploading(false)
+        return
+      }
+
+      if (data) {
+        const { data: urlData } = supabase.storage.from('book-images').getPublicUrl(fileName)
+        if (urlData) {
+          setImages((prev) => [...prev, urlData.publicUrl])
+        }
+      }
+    }
+
+    setUploading(false)
+  }
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index))
+    if (currentImageIndex >= images.length - 1) {
+      setCurrentImageIndex(Math.max(0, images.length - 2))
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!user) {
+      showToast('error', '请先登录')
+      return
+    }
+
+    if (!title.trim()) {
+      showToast('error', '请输入书名')
+      return
+    }
+
+    if (!price || parseFloat(price) <= 0) {
+      showToast('error', '请输入有效价格')
+      return
+    }
+
+    if (!wechat && !phone) {
+      showToast('error', '请至少填写微信号或联系电话')
+      return
+    }
+
+    setLoading(true)
+
+    const description = [
+      wechat ? `微信号：${wechat}` : '',
+      phone ? `联系电话：${phone}` : '',
+      remark ? `备注：${remark}` : '',
+    ].filter(Boolean).join('\n')
+
+    const { error: insertError } = await supabase.from('books').insert({
+      user_id: user.id,
+      title: title.trim(),
+      isbn: isbn.trim() || null,
+      author: author.trim() || null,
+      publisher: publisher.trim() || null,
+      price: parseFloat(price),
+      original_price: originalPrice ? parseFloat(originalPrice) : null,
+      condition,
+      category,
+      grade: selectedGrades.join(','),
+      subject: selectedMajors.join(','),
+      images,
+      image_url: images[0] || null,
+      description: description || null,
+    })
+
+    setLoading(false)
+
+    if (insertError) {
+      showToast('error', '发布失败：' + insertError.message)
+      return
+    }
+
+    showToast('success', '发布成功！')
+    setTimeout(() => {
+      router.push('/')
+      router.refresh()
+    }, 1500)
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 py-20" style={{ minHeight: '60vh' }}>
+        <div className="w-20 h-20 rounded-full bg-warm-100 flex items-center justify-center mb-4">
+          <span className="text-4xl">📝</span>
+        </div>
+        <h2 className="text-xl font-semibold mb-2 text-primary">发布功能</h2>
+        <p className="mb-6 text-center text-gray-500">请先登录后再发布商品</p>
+        <a href="/my" className="btn-primary">去登录</a>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ padding: '16px', paddingBottom: 100 }}>
-      {toast && <Toast {...toast} />}
-      <style>{`
-        @keyframes fieldError { 0%,100%{border-color:rgba(232,89,12,0.4)} 50%{border-color:rgba(232,89,12,0.8)} }
-        .field-error { animation: fieldError 1s ease 2; border-color: #E8590C !important; }
-        .pill-active { background: rgba(245,230,208,0.6) !important; color: #8B6914 !important; border-color: #E0C9A8 !important; }
-        .pill-inactive { background: #f0f2f5 !important; color: #666 !important; border-color: transparent !important; }
-        .type-card-active { background: rgba(245,230,208,0.3) !important; border-color: #E0C9A8 !important; color: #8B6914 !important; }
-        .type-card-inactive { background: rgba(255,255,255,0.85) !important; border-color: rgba(0,0,0,0.06) !important; color: #999 !important; }
-        .form-input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); font-size: 15px; color: #1a1a1a; outline: none; transition: border-color 0.2s; box-sizing: border-box; font-family: inherit; }
-        .form-input:focus { border-color: #C4A882; }
-        .form-input::placeholder { color: #bbb; }
-        .submit-btn { width: 100%; padding: 14px; border-radius: 14px; border: none; background: linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 100%); color: #5D4E37; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.15s; box-shadow: 0 4px 12px rgba(0,0,0,0.08); font-family: inherit; }
-        .submit-btn:active { transform: scale(0.97); }
-        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .ios-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border-radius: 16px; border: 1px solid rgba(0,0,0,0.04); padding: 16px; margin-bottom: 12px; }
-      `}</style>
-
-      {/* Type Switcher */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-        {(['教材', '备考资料'] as GoodsType[]).map(type => (
-          <div key={type} className={form.goodsType === type ? 'type-card-active' : 'type-card-inactive'}
-            onClick={() => updateForm({ goodsType: type })}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 12px', borderRadius: 14, border: '1.5px solid', cursor: 'pointer', transition: 'all 0.2s' }}>
-            {type === '教材' ? <BookOpen size={24} strokeWidth={1.5} /> : <FileText size={24} strokeWidth={1.5} />}
-            <span style={{ fontSize: 14, fontWeight: 500 }}>{type}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* 教材 fields */}
-      {form.goodsType === '教材' && (
-        <>
-          <div className="ios-card">
-            {renderFieldLabel('ISBN', true)}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input className={`form-input ${getErrorFor('isbn') ? 'field-error' : ''}`} placeholder="请输入ISBN" value={form.isbn} onChange={e => updateForm({ isbn: e.target.value })} style={{ flex: 1 }} />
-              <button onClick={() => showToast('功能开发中', 'info')} style={{ width: 48, height: 48, borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-                <Camera size={20} color="#666" />
-              </button>
+    <form onSubmit={handleSubmit} className="p-4 pb-20 space-y-4">
+      {/* 商品类型 */}
+      <div className="rounded-card p-4 bg-white">
+        <h3 className="font-bold mb-3 text-primary">商品类型</h3>
+        <div className="flex gap-4">
+          {[
+            { key: '教材', icon: '📚', label: '教材' },
+            { key: '备考资料', icon: '📝', label: '备考资料' },
+          ].map((item) => (
+            <div
+              key={item.key}
+              onClick={() => setCategory(item.key)}
+              className="flex-1 p-4 rounded-xl text-center cursor-pointer transition-all duration-200 active:scale-95"
+              style={{
+                background: category === item.key ? '#FFF8F0' : '#fff',
+                border: `2px solid ${category === item.key ? '#F5E6D0' : '#e0e0e0'}`,
+              }}
+            >
+              <div className="text-3xl mb-2">{item.icon}</div>
+              <div className="font-semibold text-primary">{item.label}</div>
             </div>
-          </div>
-          <div className="ios-card">
-            {renderFieldLabel('书名', true)}
-            <input className={`form-input ${getErrorFor('title') ? 'field-error' : ''}`} placeholder="请输入书名" value={form.title} onChange={e => updateForm({ title: e.target.value })} />
-          </div>
-          <div className="ios-card">
-            {renderFieldLabel('作者')}
-            <input className="form-input" placeholder="请输入作者（选填）" value={form.author} onChange={e => updateForm({ author: e.target.value })} />
-          </div>
-          <div className="ios-card">
-            {renderFieldLabel('出版社')}
-            <input className="form-input" placeholder="请输入出版社（选填）" value={form.publisher} onChange={e => updateForm({ publisher: e.target.value })} />
-          </div>
-        </>
-      )}
-
-      {/* 备考资料 fields */}
-      {form.goodsType === '备考资料' && (
-        <>
-          <div className="ios-card">
-            {renderFieldLabel('书名', true)}
-            <input className={`form-input ${getErrorFor('title') ? 'field-error' : ''}`} placeholder="请输入资料名称" value={form.title} onChange={e => updateForm({ title: e.target.value })} />
-          </div>
-          <div className="ios-card">
-            {renderFieldLabel('资料类型', true)}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {MATERIAL_TYPE_OPTIONS.map(mt => (
-                <button key={mt} className={form.materialType === mt ? 'pill-active' : 'pill-inactive'} onClick={() => updateForm({ materialType: mt })}
-                  style={{ padding: '8px 16px', borderRadius: 20, border: '1px solid', fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s' }}>{mt}</button>
-              ))}
-            </div>
-          </div>
-          <div className="ios-card">
-            {renderFieldLabel('适用考试')}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {EXAM_TYPE_OPTIONS.map(et => (
-                <button key={et} className={form.examType === et ? 'pill-active' : 'pill-inactive'} onClick={() => updateForm({ examType: et, examSubjects: [] })}
-                  style={{ padding: '8px 16px', borderRadius: 20, border: '1px solid', fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s' }}>{et}</button>
-              ))}
-            </div>
-          </div>
-          {EXAM_SUBJECTS[form.examType]?.length > 0 && (
-            <div className="ios-card">
-              {renderFieldLabel('考试科目')}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {EXAM_SUBJECTS[form.examType].map(s => (
-                  <button key={s} className={form.examSubjects.includes(s) ? 'pill-active' : 'pill-inactive'} onClick={() => toggleExamSubject(s)}
-                    style={{ padding: '8px 16px', borderRadius: 20, border: '1px solid', fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s' }}>{s}</button>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* 成色 */}
-      <div className="ios-card">
-        {renderFieldLabel('成色', true)}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {CONDITION_OPTIONS.map(c => (
-            <button key={c} className={form.condition === c ? 'pill-active' : 'pill-inactive'} onClick={() => updateForm({ condition: c })}
-              style={{ padding: '8px 16px', borderRadius: 20, border: '1px solid', fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s' }}>{c}</button>
           ))}
         </div>
-        {getErrorFor('condition') && <div style={{ marginTop: 6, fontSize: 12, color: '#E8590C' }}>{getErrorFor('condition')?.message}</div>}
       </div>
 
-      {/* 年级 */}
-      {form.goodsType === '教材' && (
-        <div className="ios-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setGradeExpanded(!gradeExpanded)}>
-            {renderFieldLabel('适用年级（选填）')}
-            {gradeExpanded ? <ChevronUp size={18} color="#999" /> : <ChevronDown size={18} color="#999" />}
-          </div>
-          {gradeExpanded && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-              {GRADE_OPTIONS.map(g => (
-                <button key={g} className={form.grades.includes(g) ? 'pill-active' : 'pill-inactive'} onClick={() => toggleGrade(g)}
-                  style={{ padding: '8px 16px', borderRadius: 20, border: '1px solid', fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s' }}>{g}</button>
+      {/* 商品图片 */}
+      <div className="rounded-card p-4 bg-white">
+        <h3 className="font-bold mb-3 text-primary">商品图片（{images.length}/5）</h3>
+        {images.length > 0 ? (
+          <div>
+            <div className="relative mb-3">
+              <div className="w-full h-64 rounded-xl overflow-hidden bg-gray-50">
+                <img src={images[currentImageIndex]} alt="" className="w-full h-full object-contain" />
+              </div>
+              <button
+                type="button"
+                onClick={() => removeImage(currentImageIndex)}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center bg-black/50 text-white touch-target active:scale-95 transition-transform"
+              >
+                ✕
+              </button>
+              <div className="absolute bottom-2 right-2 px-3 py-1 rounded-full text-xs bg-black/50 text-white">
+                {currentImageIndex + 1}/{images.length}
+              </div>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {images.map((img, index) => (
+                <div
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className="relative flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
+                  style={{ border: index === currentImageIndex ? '3px solid #ffa06f' : '3px solid transparent', borderRadius: '8px' }}
+                >
+                  <img src={img} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                </div>
               ))}
+              {images.length < 5 && (
+                <label className="flex-shrink-0 w-16 h-16 rounded-lg flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-cream active:scale-95 transition-transform">
+                  <span className="text-xl text-gray-400">+</span>
+                  <span className="text-xs text-gray-400">添加</span>
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
+                </label>
+              )}
             </div>
-          )}
-          {!gradeExpanded && form.grades.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-              {form.grades.map(g => <span key={g} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, background: 'rgba(245,230,208,0.6)', color: '#8B6914' }}>{g}</span>)}
-            </div>
+          </div>
+        ) : (
+          <label className="w-full h-48 rounded-xl flex flex-col items-center justify-center cursor-pointer border-2 border-dashed border-cream active:scale-[0.98] transition-transform">
+            <span className="text-4xl text-gray-400">{uploading ? '⏳' : '📷'}</span>
+            <span className="text-sm mt-2 text-gray-400">{uploading ? '上传中...' : '点击上传图片（最多5张）'}</span>
+            <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
+          </label>
+        )}
+      </div>
+
+      {/* 基本信息 */}
+      <div className="rounded-card p-4 bg-white">
+        <h3 className="font-bold mb-3 text-primary">基本信息</h3>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> 书名</span>
+            <input className="flex-1 input" placeholder="请输入书名或资料名称" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          {category === '教材' && (
+            <>
+              <div className="flex items-center gap-3">
+                <span className="w-16 text-sm text-primary flex-shrink-0">ISBN</span>
+                <input className="flex-1 input" placeholder="选填" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-16 text-sm text-primary flex-shrink-0">作者</span>
+                <input className="flex-1 input" placeholder="选填" value={author} onChange={(e) => setAuthor(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-16 text-sm text-primary flex-shrink-0">出版社</span>
+                <input className="flex-1 input" placeholder="选填" value={publisher} onChange={(e) => setPublisher(e.target.value)} />
+              </div>
+            </>
           )}
         </div>
-      )}
+      </div>
 
-      {/* 专业 */}
-      {form.goodsType === '教材' && (
-        <div className="ios-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setMajorExpanded(!majorExpanded)}>
-            {renderFieldLabel('适用专业（选填）')}
-            {majorExpanded ? <ChevronUp size={18} color="#999" /> : <ChevronDown size={18} color="#999" />}
+      {/* 适用范围 - 教材 */}
+      {category === '教材' && (
+        <div className="rounded-card p-4 bg-white">
+          <h3 className="font-bold mb-3 text-primary">适用范围</h3>
+          <div className="mb-4">
+            <div className="text-sm mb-2 text-primary">适用年级（可多选）</div>
+            <div className="flex flex-wrap gap-2">
+              {grades.map(g => (
+                <div
+                  key={g}
+                  onClick={() => toggleGrade(g)}
+                  className="px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95"
+                  style={{
+                    background: selectedGrades.includes(g) ? '#F5E6D0' : '#f0f2f5',
+                    color: selectedGrades.includes(g) ? '#fff' : '#636e72',
+                    border: `1px solid ${selectedGrades.includes(g) ? '#F5E6D0' : '#e0e0e0'}`
+                  }}
+                >
+                  {g}
+                </div>
+              ))}
+            </div>
           </div>
-          {majorExpanded && (
-            <div style={{ marginTop: 4 }}>
-              {Object.entries(MAJOR_CATEGORIES).map(([cat, subs]) => (
-                <div key={cat} style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 6, fontWeight: 500 }}>{cat}</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {subs.map(m => (
-                      <button key={m} className={form.majors.includes(m) ? 'pill-active' : 'pill-inactive'} onClick={() => toggleMajor(m)}
-                        style={{ padding: '6px 12px', borderRadius: 16, border: '1px solid', fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}>{m}</button>
+          <div>
+            <div className="text-sm mb-2 text-primary">适用专业（可多选）</div>
+            <div className="max-h-60 overflow-y-auto">
+              <div className="mb-3">
+                <div
+                  onClick={() => toggleMajor('全专业通用')}
+                  className="px-3 py-1.5 rounded-full text-sm cursor-pointer inline-block transition-all duration-200 active:scale-95"
+                  style={{
+                    background: selectedMajors.includes('全专业通用') ? '#F5E6D0' : '#f0f2f5',
+                    color: selectedMajors.includes('全专业通用') ? '#fff' : '#636e72',
+                    border: `1px solid ${selectedMajors.includes('全专业通用') ? '#F5E6D0' : '#e0e0e0'}`
+                  }}
+                >
+                  全专业通用
+                </div>
+              </div>
+              {majorCategories.map(category => (
+                <div key={category.name} className="mb-3">
+                  <div className="text-xs font-semibold mb-1 text-gray-400">{category.name}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {category.majors.map(m => (
+                      <div
+                        key={m}
+                        onClick={() => toggleMajor(m)}
+                        className="px-2 py-1 rounded-full text-xs cursor-pointer transition-all duration-200 active:scale-95"
+                        style={{
+                          background: selectedMajors.includes(m) ? '#F5E6D0' : '#f0f2f5',
+                          color: selectedMajors.includes(m) ? '#fff' : '#636e72',
+                          border: `1px solid ${selectedMajors.includes(m) ? '#F5E6D0' : '#e0e0e0'}`
+                        }}
+                      >
+                        {m}
+                      </div>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
-          )}
-          {!majorExpanded && form.majors.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-              {form.majors.slice(0, 5).map(m => <span key={m} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, background: 'rgba(245,230,208,0.6)', color: '#8B6914' }}>{m}</span>)}
-              {form.majors.length > 5 && <span style={{ fontSize: 12, color: '#999', lineHeight: '24px' }}>+{form.majors.length - 5}</span>}
-            </div>
-          )}
+          </div>
         </div>
       )}
 
-      {/* 图片 */}
-      <div className="ios-card">
-        {renderFieldLabel('图片（最多5张）')}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {form.images.map((url, idx) => (
-            <div key={idx} style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', position: 'relative' }}>
-              <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <button onClick={() => removeImage(idx)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: 10, background: 'rgba(0,0,0,0.5)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <X size={12} color="#fff" />
-              </button>
+      {/* 价格与成色 */}
+      <div className="rounded-card p-4 bg-white">
+        <h3 className="font-bold mb-3 text-primary">价格与成色</h3>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> 售价</span>
+            <input className="flex-1 input" type="number" step="0.01" min="0" placeholder="请输入售价" value={price} onChange={(e) => setPrice(e.target.value)} />
+            <span className="text-sm text-gray-500">元</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-16 text-sm text-primary flex-shrink-0">原价</span>
+            <input className="flex-1 input" type="number" step="0.01" min="0" placeholder="选填" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} />
+            <span className="text-sm text-gray-500">元</span>
+          </div>
+          <div>
+            <div className="text-sm mb-2 text-primary">成色</div>
+            <div className="flex flex-wrap gap-2">
+              {['全新', '九成新', '八成新', '七成新', '六成新以下'].map(c => (
+                <div
+                  key={c}
+                  onClick={() => setCondition(c)}
+                  className="px-4 py-2 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95"
+                  style={{
+                    background: condition === c ? '#F5E6D0' : '#fff',
+                    color: condition === c ? '#fff' : '#333',
+                    border: `1px solid ${condition === c ? '#F5E6D0' : '#e0e0e0'}`
+                  }}
+                >
+                  {c}
+                </div>
+              ))}
             </div>
-          ))}
-          {form.images.length < 5 && (
-            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-              style={{ width: 80, height: 80, borderRadius: 10, border: '1px dashed rgba(0,0,0,0.12)', background: '#f8f8f8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', opacity: uploading ? 0.5 : 1 }}>
-              <Upload size={18} color="#999" />
-              <span style={{ fontSize: 10, color: '#999' }}>{uploading ? '上传中' : '添加'}</span>
-            </button>
-          )}
+          </div>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} style={{ display: 'none' }} />
       </div>
 
-      {/* Disclaimer */}
-      <Disclaimer variant="publish" />
-
-      {/* 提交 */}
-      <div style={{ marginTop: 20 }}>
-        <button className="submit-btn" onClick={handleSubmit} disabled={submitting}>
-          {submitting ? '发布中...' : '发布'}
-        </button>
+      {/* 联系方式 */}
+      <div className="rounded-card p-4 bg-white">
+        <h3 className="font-bold mb-3 text-primary">联系方式</h3>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="w-16 text-sm text-primary flex-shrink-0">微信号</span>
+            <input className="flex-1 input" placeholder="方便买家联系你" value={wechat} onChange={(e) => setWechat(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-16 text-sm text-primary flex-shrink-0">联系电话</span>
+            <input className="flex-1 input" type="tel" placeholder="方便买家电话联系" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="w-16 text-sm text-primary flex-shrink-0">备注</span>
+            <input className="flex-1 input" placeholder="补充说明" value={remark} onChange={(e) => setRemark(e.target.value)} />
+          </div>
+        </div>
       </div>
-    </div>
-  );
+
+      <div className="p-3 rounded-card bg-amber-50 border-l-4 border-amber-400">
+        <div className="flex items-start gap-2">
+          <span className="text-xl">⚠️</span>
+          <p className="text-sm text-amber-700">本平台仅提供信息撮合服务，不涉及在线支付，请当面交易，谨防诈骗</p>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading || uploading}
+        className="btn-accent w-full mt-6 py-3 text-base disabled:opacity-50"
+      >
+        {loading ? '发布中...' : uploading ? '图片上传中...' : '发布商品'}
+      </button>
+    </form>
+  )
 }
