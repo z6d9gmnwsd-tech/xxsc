@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import './globals.css';
+import '../styles/globals.css';
 
 export const metadata: Metadata = {
   title: '校书仓 - 校园二手书交易平台',
