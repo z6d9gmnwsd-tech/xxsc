@@ -11,7 +11,7 @@ export function showToast(type: ToastProps['type'], message: string) {
   }
 }
 
-export default function Toast({ show, type, message }: ToastProps) {
+export default function Toast(props?: Partial<ToastProps>) {
   const [isVisible, setIsVisible] = useState(false)
   const [toastType, setToastType] = useState<ToastProps['type']>('info')
   const [toastMessage, setToastMessage] = useState('')
@@ -38,9 +38,9 @@ export default function Toast({ show, type, message }: ToastProps) {
     }
   }, [toastShow])
 
-  const displayShow = show !== undefined ? show : toastShow
-  const displayType = type || toastType
-  const displayMessage = message || toastMessage
+  const displayShow = props?.show !== undefined ? props.show : toastShow
+  const displayType = props?.type || toastType
+  const displayMessage = props?.message || toastMessage
 
   if (!isVisible && !displayShow) return null
 
