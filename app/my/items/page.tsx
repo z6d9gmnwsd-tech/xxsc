@@ -11,18 +11,19 @@ import BackButton from '@/components/BackButton'
 import { Book } from '@/types'
 
 export default function MyItemsPage() {
-  const { user } = usePhoneAuth()
+  const { user, loading } = usePhoneAuth()
   const router = useRouter()
   const [books, setBooks] = useState<Book[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => {
+    if (loading) return
     if (!user) {
       router.push('/my')
       return
     }
     loadBooks()
-  }, [user])
+  }, [user, loading])
 
   const loadBooks = async () => {
     if (!user) return
@@ -33,7 +34,15 @@ export default function MyItemsPage() {
       .order('created_at', { ascending: false })
 
     if (data) setBooks(data)
-    setLoading(false)
+    setLoadingData(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="inline-block w-8 h-8 border-2 border-warm-200 border-t-accent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -47,7 +56,7 @@ export default function MyItemsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {loadingData ? (
         <Skeleton type="card" count={2} />
       ) : books.length === 0 ? (
         <EmptyState icon="📦" title="暂无发布" description="发布你的闲置教材吧" action={{ label: '去发布', href: '/publish' }} />
