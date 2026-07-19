@@ -1,25 +1,97 @@
+import { BookOpen, Search, Inbox, ShoppingCart, FileText } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
 interface EmptyStateProps {
-  icon?: string
-  title: string
-  description?: string
-  action?: { label: string; href: string }
+  icon?: LucideIcon | string;
+  title: string;
+  description?: string;
+  action?: {
+    label: string;
+    href?: string;
+    onClick?: () => void;
+  };
 }
 
-export default function EmptyState({ icon = '📚', title, description, action }: EmptyStateProps) {
+const iconMap: Record<string, LucideIcon> = {
+  search: Search,
+  inbox: Inbox,
+  cart: ShoppingCart,
+  book: BookOpen,
+  file: FileText,
+};
+
+export default function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+}: EmptyStateProps) {
+  let IconComponent: LucideIcon | null = null;
+
+  if (typeof icon === 'string') {
+    IconComponent = iconMap[icon] || BookOpen;
+  } else if (icon) {
+    IconComponent = icon;
+  } else {
+    IconComponent = BookOpen;
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center p-8 py-16 animate-fade-in">
-      <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5" style={{background: 'linear-gradient(135deg, #F5E6D0, #E0C9A8)'}}>
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#8B6914" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-          <path d="M8 7h6"/>
-          <path d="M8 11h8"/>
-        </svg>
+    <div className="flex flex-col items-center justify-center py-16 px-8 animate-fade-in">
+      {/* Icon Circle */}
+      <div
+        className="flex items-center justify-center rounded-full mb-5"
+        style={{
+          width: 80,
+          height: 80,
+          background: 'linear-gradient(135deg, rgba(91,140,90,0.15), rgba(64,145,108,0.08))',
+        }}
+      >
+        <IconComponent
+          size={36}
+          color="#5B8C5A"
+          strokeWidth={1.5}
+        />
       </div>
-      <h2 className="text-lg font-semibold mb-2" style={{color: '#333'}}>{title}</h2>
-      {description && <p className="text-sm mb-6 text-center" style={{color: '#999'}}>{description}</p>}
+
+      {/* Title */}
+      <h3
+        className="text-base font-medium mb-2"
+        style={{ color: '#333333' }}
+      >
+        {title}
+      </h3>
+
+      {/* Description */}
+      {description && (
+        <p
+          className="text-sm text-center leading-relaxed mb-6"
+          style={{ color: '#999999', maxWidth: 240 }}
+        >
+          {description}
+        </p>
+      )}
+
+      {/* Action Button */}
       {action && (
-        <a href={action.href} className="btn-primary">{action.label}</a>
+        action.href ? (
+          <a
+            href={action.href}
+            className="btn-primary"
+            style={{ fontSize: 14, padding: '8px 20px' }}
+          >
+            {action.label}
+          </a>
+        ) : (
+          <button
+            onClick={action.onClick}
+            className="btn-primary"
+            style={{ fontSize: 14, padding: '8px 20px' }}
+          >
+            {action.label}
+          </button>
+        )
       )}
     </div>
-  )
+  );
 }
