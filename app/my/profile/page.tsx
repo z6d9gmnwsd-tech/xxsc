@@ -5,241 +5,111 @@ import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import { useRouter } from 'next/navigation'
 import BackButton from '@/components/BackButton'
-import BottomNav from '@/components/BottomNav'
-import { User, Save, Loader2, X } from 'lucide-react'
+import { showToast } from '@/components/Toast'
 
-interface Profile {
-  nickname: string
-  school: string
-  bio: string
-  avatar_url: string
-}
-
-function ProfileSkeleton() {
-  return (
-    <div className="p-4 space-y-4">
-      <div className="flex flex-col items-center mb-4">
-        <div className="w-20 h-20 rounded-full skeleton" />
-      </div>
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="space-y-2">
-          <div className="h-4 w-16 skeleton rounded-lg" />
-          <div className="h-12 w-full skeleton rounded-xl" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-export default function EditProfilePage() {
-  const { user, loading: userLoading } = usePhoneAuth()
+export default function ProfilePage() {
+  const { user, logout } = usePhoneAuth()
   const router = useRouter()
-  const [profile, setProfile] = useState<Profile>({ nickname: '', school: '', bio: '', avatar_url: '' })
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [success, setSuccess] = useState('')
-  const [error, setError] = useState('')
+  const [nickname, setNickname] = useState('')
+  const [school, setSchool] = useState('')
+  const [bio, setBio] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => {
-    if (!userLoading && !user) {
-      router.push('/auth/login')
+    if (!user) {
+      router.push('/my')
+      return
     }
-    if (user) fetchProfile()
-  }, [user, userLoading])
+    loadProfile()
+  }, [user])
 
-  const fetchProfile = async () => {
+  const loadProfile = async () => {
+    if (!user) return
     const { data } = await supabase
       .from('profiles')
-      .select('*')
-      .eq('id', user!.id)
+      .select('nickname, school, bio')
+      .eq('id', user.id)
       .single()
 
     if (data) {
-      setProfile({
-        nickname: data.nickname || '',
-        school: data.school || '',
-        bio: data.bio || '',
-        avatar_url: data.avatar_url || '',
-      })
+      setNickname(data.nickname || '')
+      setSchool(data.school || '')
+      setBio(data.bio || '')
     }
-    setLoading(false)
+    setLoadingData(false)
   }
 
   const handleSave = async () => {
-    setSaving(true)
-    setError('')
-    setSuccess('')
+    if (!user) return
+    if (!nickname.trim()) {
+      showToast('error', '昵称不能为空')
+      return
+    }
 
-    const { error: updateError } = await supabase
+    setLoading(true)
+    const { error } = await supabase
       .from('profiles')
       .update({
-        nickname: profile.nickname,
-        school: profile.school,
-        bio: profile.bio,
-        avatar_url: profile.avatar_url,
-        updated_at: new Date().toISOString(),
+        nickname: nickname.trim(),
+        school: school.trim() || null,
+        bio: bio.trim() || null,
       })
-      .eq('id', user!.id)
+      .eq('id', user.id)
 
-    if (updateError) {
-      setError('保存失败：' + updateError.message)
-    } else {
-      setSuccess('保存成功！')
-      setTimeout(() => router.push('/my'), 1500)
+    setLoading(false)
+
+    if (error) {
+      showToast('error', '保存失败：' + error.message)
+      return
     }
-    setSaving(false)
+
+    localStorage.setItem('nickname', nickname.trim())
+    showToast('success', '保存成功')
+    setTimeout(() => router.push('/my'), 1500)
   }
 
-  if (userLoading || loading) {
+  if (loadingData) {
     return (
-      <div style={{ background: '#F2F2F7', minHeight: '100vh' }}>
-        <div
-          className="header-glass px-4 py-6 text-white"
-          style={{
-            background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)',
-            backdropFilter: 'blur(20px)',
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <BackButton />
-            <h1 className="text-xl font-bold">编辑个人信息</h1>
-          </div>
-        </div>
-        <ProfileSkeleton />
-        <BottomNav activeTab="profile" />
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="inline-block w-8 h-8 border-2 border-warm-200 border-t-accent rounded-full animate-spin" />
       </div>
     )
   }
 
-  if (!user) return null
-
   return (
-    <div className="pb-20" style={{ background: '#F2F2F7', minHeight: '100vh' }}>
-      <div
-        className="header-glass px-4 py-6 text-white"
-        style={{
-          background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)',
-          backdropFilter: 'blur(20px)',
-        }}
-      >
+    <div className="pb-20">
+      <div className="bg-gradient-primary px-4 py-6 text-white">
         <div className="flex items-center gap-3">
           <BackButton />
-          <div className="flex items-center gap-2">
-            <User size={20} />
-            <h1 className="text-xl font-bold">编辑个人信息</h1>
+          <div className="flex-1">
+            <h1 className="text-xl font-bold tracking-wide">编辑个人信息</h1>
           </div>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
-        {error && (
-          <div
-            className="p-3 rounded-2xl flex items-center gap-2 text-sm animate-fade-in"
-            style={{ background: 'rgba(255,59,48,0.08)', color: '#FF3B30' }}
-          >
-            <X size={16} />
-            {error}
-          </div>
-        )}
-        {success && (
-          <div
-            className="p-3 rounded-2xl text-sm text-center animate-fade-in"
-            style={{ background: 'rgba(52,199,89,0.08)', color: '#34C759' }}
-          >
-            {success}
-          </div>
-        )}
-
-        {/* Avatar */}
-        <div className="flex flex-col items-center mb-4">
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden mb-2"
-            style={{
-              background: profile.avatar_url
-                ? 'transparent'
-                : 'linear-gradient(135deg, #F5E6D0, #E0C9A8)',
-            }}
-          >
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <User size={32} color="#fff" />
-            )}
-          </div>
-        </div>
-
-        {/* Form Fields */}
-        <div
-          className="rounded-2xl p-4"
-          style={{
-            background: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(10px)',
-            border: '0.5px solid rgba(0,0,0,0.04)',
-          }}
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#1a1a1a' }}>头像链接</label>
-              <input
-                className="input"
-                placeholder="https://图片链接"
-                value={profile.avatar_url}
-                onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
-              />
+        <div className="rounded-card p-4 bg-white">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> 昵称</span>
+              <input className="flex-1 input" placeholder="请输入昵称" value={nickname} onChange={(e) => setNickname(e.target.value)} />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#1a1a1a' }}>昵称</label>
-              <input
-                className="input"
-                placeholder="设置你的昵称"
-                value={profile.nickname}
-                onChange={(e) => setProfile({ ...profile, nickname: e.target.value })}
-              />
+            <div className="flex items-center gap-3">
+              <span className="w-16 text-sm text-primary flex-shrink-0">学校</span>
+              <input className="flex-1 input" placeholder="选填" value={school} onChange={(e) => setSchool(e.target.value)} />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#1a1a1a' }}>学校</label>
-              <input
-                className="input"
-                placeholder="你的学校名称"
-                value={profile.school}
-                onChange={(e) => setProfile({ ...profile, school: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#1a1a1a' }}>个人简介</label>
-              <textarea
-                className="input min-h-[80px]"
-                placeholder="简单介绍一下自己"
-                value={profile.bio}
-                onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-              />
+            <div className="flex items-center gap-3">
+              <span className="w-16 text-sm text-primary flex-shrink-0">简介</span>
+              <input className="flex-1 input" placeholder="选填" value={bio} onChange={(e) => setBio(e.target.value)} />
             </div>
           </div>
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-primary w-full mt-6 disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {saving ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              保存中...
-            </>
-          ) : (
-            <>
-              <Save size={16} />
-              保存
-            </>
-          )}
+        <button onClick={handleSave} disabled={loading} className="btn-primary w-full disabled:opacity-50">
+          {loading ? '保存中...' : '保存修改'}
         </button>
       </div>
-
-      <BottomNav activeTab="profile" />
     </div>
   )
 }
