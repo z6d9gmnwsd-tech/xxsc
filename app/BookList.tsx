@@ -58,7 +58,11 @@ function BookList({ searchQuery = '', sortBy = 'newest', filterCategory = '' }: 
   })
 
   if (isLoading) {
-    return <Skeleton type="card" count={3} />
+    return (
+      <div className="px-4 py-2">
+        <Skeleton type="card" count={3} />
+      </div>
+    )
   }
 
   if (error) {
@@ -85,8 +89,8 @@ function BookList({ searchQuery = '', sortBy = 'newest', filterCategory = '' }: 
 
   return (
     <div className="px-4 py-2">
-      {books.map((book: Book) => (
-        <BookCard key={book.id} book={book} />
+      {books.map((book: Book, index: number) => (
+        <BookCard key={book.id} book={book} index={index} />
       ))}
     </div>
   )
