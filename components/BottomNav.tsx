@@ -18,13 +18,7 @@ const navItems = [
           strokeLinejoin="round"
           fill={active ? 'rgba(255, 140, 90, 0.08)' : 'none'}
         />
-        <path
-          d="M9 22V12H15V22"
-          stroke={active ? '#FF8C5A' : '#9CA3AF'}
-          strokeWidth={active ? '2.2' : '1.8'}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <path d="M9 22V12H15V22" stroke={active ? '#FF8C5A' : '#9CA3AF'} strokeWidth={active ? '2.2' : '1.8'} strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -34,28 +28,14 @@ const navItems = [
     label: '发布',
     icon: (active: boolean) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <rect
-          x="3"
-          y="3"
-          width="18"
-          height="18"
-          rx="4"
-          stroke={active ? '#FF8C5A' : '#9CA3AF'}
-          strokeWidth={active ? '2.2' : '1.8'}
-          fill={active ? 'rgba(255, 140, 90, 0.08)' : 'none'}
-        />
-        <path
-          d="M12 8V16M8 12H16"
-          stroke={active ? '#FF8C5A' : '#9CA3AF'}
-          strokeWidth={active ? '2.2' : '1.8'}
-          strokeLinecap="round"
-        />
+        <rect x="3" y="3" width="18" height="18" rx="4" stroke={active ? '#FF8C5A' : '#9CA3AF'} strokeWidth={active ? '2.2' : '1.8'} fill={active ? 'rgba(255, 140, 90, 0.08)' : 'none'}/>
+        <path d="M12 8V16M8 12H16" stroke={active ? '#FF8C5A' : '#9CA3AF'} strokeWidth={active ? '2.2' : '1.8'} strokeLinecap="round"/>
       </svg>
     ),
   },
   {
     key: 'favorites',
-    href: '/my/favorites',
+    href: '/favorites',
     label: '收藏',
     icon: (active: boolean) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -76,20 +56,8 @@ const navItems = [
     label: '我的',
     icon: (active: boolean) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <circle
-          cx="12"
-          cy="8"
-          r="4"
-          stroke={active ? '#FF8C5A' : '#9CA3AF'}
-          strokeWidth={active ? '2.2' : '1.8'}
-          fill={active ? 'rgba(255, 140, 90, 0.08)' : 'none'}
-        />
-        <path
-          d="M5 20C5 17.2386 8.13401 15 12 15C15.866 15 19 17.2386 19 20"
-          stroke={active ? '#FF8C5A' : '#9CA3AF'}
-          strokeWidth={active ? '2.2' : '1.8'}
-          strokeLinecap="round"
-        />
+        <circle cx="12" cy="8" r="4" stroke={active ? '#FF8C5A' : '#9CA3AF'} strokeWidth={active ? '2.2' : '1.8'} fill={active ? 'rgba(255, 140, 90, 0.08)' : 'none'}/>
+        <path d="M5 20C5 17.2386 8.13401 15 12 15C15.866 15 19 17.2386 19 20" stroke={active ? '#FF8C5A' : '#9CA3AF'} strokeWidth={active ? '2.2' : '1.8'} strokeLinecap="round"/>
       </svg>
     ),
   },
@@ -102,7 +70,7 @@ export default function BottomNav() {
   const getActiveKey = () => {
     if (pathname === '/') return 'home'
     if (pathname.startsWith('/publish')) return 'publish'
-    if (pathname.startsWith('/my/favorites')) return 'favorites'
+    if (pathname === '/favorites') return 'favorites'
     if (pathname.startsWith('/my')) return 'my'
     return 'home'
   }
@@ -112,16 +80,12 @@ export default function BottomNav() {
   return (
     <div
       className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50 glass border-t"
-      style={{
-        borderColor: 'rgba(240, 230, 216, 0.5)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      }}
+      style={{ borderColor: 'rgba(240, 230, 216, 0.5)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-center justify-around px-2">
         {navItems.map((item) => {
           const isActive = activeKey === item.key
           const isPressed = pressedKey === item.key
-
           return (
             <a
               key={item.key}
@@ -136,32 +100,16 @@ export default function BottomNav() {
               <div
                 className="w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200"
                 style={{
-                  backgroundColor: isActive
-                    ? 'rgba(255, 140, 90, 0.08)'
-                    : isPressed
-                    ? '#FBF6EE'
-                    : 'transparent',
+                  backgroundColor: isActive ? 'rgba(255, 140, 90, 0.08)' : isPressed ? '#FBF6EE' : 'transparent',
                   transform: isPressed ? 'scale(0.9)' : 'scale(1)',
-                  transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                 }}
               >
                 {item.icon(isActive)}
               </div>
-              <span
-                className="text-xs mt-1 font-medium"
-                style={{
-                  color: isActive ? '#FF8C5A' : '#9CA3AF',
-                  fontSize: '0.625rem',
-                }}
-              >
+              <span className="text-xs mt-1 font-medium" style={{ color: isActive ? '#FF8C5A' : '#9CA3AF', fontSize: '0.625rem' }}>
                 {item.label}
               </span>
-              {isActive && (
-                <div
-                  className="absolute -bottom-0.5 w-4 h-0.5 rounded-full"
-                  style={{ backgroundColor: '#FF8C5A' }}
-                />
-              )}
+              {isActive && <div className="absolute -bottom-0.5 w-4 h-0.5 rounded-full" style={{ backgroundColor: '#FF8C5A' }} />}
             </a>
           )
         })}
