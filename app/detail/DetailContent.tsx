@@ -1,518 +1,319 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Heart,
-  MoreHorizontal,
-  Share2,
-  Phone,
-  Copy,
-  Check,
-  X,
-  Edit3,
-  Trash2,
-  Archive,
-  AlertCircle,
-  Tag,
-  Clock,
-  User,
-} from 'lucide-react';
-import { SkeletonCard } from '../../components/LoadingSpinner';
-import Disclaimer from '../../components/Disclaimer';
+import { useEffect, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { usePhoneAuth } from '@/hooks/usePhoneAuth'
+import { getTimeAgo } from '@/lib/utils'
+import LoadingSpinner from '@/components/LoadingSpinner'
+import BackButton from '@/components/BackButton'
+import AuthModal from '@/components/AuthModal'
+import { showToast } from '@/components/Toast'
+import { BookWithProfile } from '@/types'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export default function DetailContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const { user } = usePhoneAuth()
+  const id = searchParams.get('id')
+  const [book, setBook] = useState<BookWithProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [isbnCount, setIsbnCount] = useState(0)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showMore, setShowMore] = useState(false)
+  const [showImageViewer, setShowImageViewer] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
-interface BookDetail {
-  id: string;
-  title: string;
-  price: number;
-  cover_url?: string;
-  images?: string[];
-  category?: string;
-  condition?: string;
-  isbn?: string;
-  author?: string;
-  publisher?: string;
-  grades?: string[];
-  majors?: string[];
-  material_type?: string;
-  exam_type?: string;
-  exam_subjects?: string[];
-  status?: string;
-  user_id: string;
-  created_at: string;
-  [key: string]: any;
-}
+  useEffect(() => {
+    if (id) {
+      loadBook(id)
+      if (user) checkFavorite(id)
+    }
+  }, [id, user])
 
-interface SellerInfo {
-  id: string;
-  nickname?: string;
-  avatar_url?: string;
-  wechat?: string;
-  phone?: string;
-}
-
-interface DetailContentProps {
-  bookId: string;
-}
-
-function timeAgo(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = Math.floor((now - then) / 1000);
-  if (diff < 60) return '刚刚';
-  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
-  if (diff < 2592000) return `${Math.floor(diff / 86400)}天前`;
-  return `${Math.floor(diff / 2592000)}月前`;
-}
-
-const conditionColorMap: Record<string, { bg: string; text: string }> = {
-  '全新': { bg: '#e8f5e9', text: '#2e7d32' },
-  '九成新': { bg: '#e3f2fd', text: '#1565c0' },
-  '八成新': { bg: '#fff3e0', text: '#e65100' },
-  '七成新': { bg: '#fce4ec', text: '#c62828' },
-  '六成新及以下': { bg: '#f3e5f5', text: '#6a1b9a' },
-};
-
-export default function DetailContent({ bookId }: DetailContentProps) {
-  const router = useRouter();
-  const [book, setBook] = useState<BookDetail | null>(null);
-  const [seller, setSeller] = useState<SellerInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
-  const [heartAnimating, setHeartAnimating] = useState(false);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-
-  const allImages = book?.images?.length
-    ? book.images
-    : book?.cover_url
-    ? [book.cover_url]
-    : [];
-
-  const fetchBookData = useCallback(async () => {
-    setLoading(true);
+  const loadBook = async (bookId: string) => {
     try {
-      const { data: bookData, error: bookError } = await supabase
+      const { data, error } = await supabase
         .from('books')
         .select('*')
         .eq('id', bookId)
-        .single();
-      if (bookError) throw bookError;
-      setBook(bookData);
+        .single()
 
-      if (bookData?.user_id) {
-        const { data: sellerData } = await supabase
-          .from('profiles')
-          .select('id, nickname, avatar_url, wechat, phone')
-          .eq('id', bookData.user_id)
-          .single();
-        setSeller(sellerData);
-
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user?.id === bookData.user_id) {
-          setIsOwner(true);
-        }
+      if (error || !data) {
+        setLoading(false)
+        return
       }
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) {
-        const { data: favData } = await supabase
-          .from('favorites')
-          .select('id')
-          .eq('user_id', userData.user.id)
-          .eq('book_id', bookId)
-          .maybeSingle();
-        setIsFavorited(!!favData);
+      let profile = null
+      if (data.user_id) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('nickname, avatar_url, school')
+          .eq('id', data.user_id)
+          .single()
+        profile = profileData
+      }
+
+      setBook({
+        ...data,
+        profiles: profile || { nickname: '匿名用户', avatar_url: null, school: null }
+      })
+
+      if (data.isbn) {
+        const { count } = await supabase
+          .from('books')
+          .select('*', { count: 'exact', head: true })
+          .eq('isbn', data.isbn)
+          .eq('status', '在售')
+          .neq('id', bookId)
+        setIsbnCount(count || 0)
       }
     } catch (err) {
-      console.error('Failed to load book:', err);
-    } finally {
-      setLoading(false);
+      console.error('Error:', err)
     }
-  }, [bookId]);
+    setLoading(false)
+  }
 
-  useEffect(() => {
-    fetchBookData();
-  }, [fetchBookData]);
+  const checkFavorite = async (bookId: string) => {
+    const { data } = await supabase
+      .from('favorites')
+      .select('id')
+      .eq('user_id', user!.id)
+      .eq('book_id', bookId)
+      .single()
+    setIsFavorite(!!data)
+  }
 
   const toggleFavorite = async () => {
-    setHeartAnimating(true);
-    setTimeout(() => setHeartAnimating(false), 300);
+    if (!user) { setShowAuthModal(true); return }
+    if (!book) return
 
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      alert('请先登录');
-      return;
-    }
-
-    if (isFavorited) {
-      await supabase
-        .from('favorites')
-        .delete()
-        .eq('user_id', userData.user.id)
-        .eq('book_id', bookId);
-      setIsFavorited(false);
+    if (isFavorite) {
+      await supabase.from('favorites').delete().eq('user_id', user.id).eq('book_id', book.id)
+      setIsFavorite(false)
+      showToast('info', '已取消收藏')
     } else {
-      await supabase
-        .from('favorites')
-        .insert({ user_id: userData.user.id, book_id: bookId });
-      setIsFavorited(true);
+      await supabase.from('favorites').insert({ user_id: user.id, book_id: book.id })
+      setIsFavorite(true)
+      showToast('success', '收藏成功')
     }
-  };
+  }
 
-  const handleCopy = (text: string, field: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedField(field);
-      setTimeout(() => setCopiedField(null), 1500);
-    });
-  };
+  const handleCopyWechat = () => {
+    if (book?.description) {
+      const wechatMatch = book.description.match(/微信号：(.+?)[\n\r]/)
+      if (wechatMatch) {
+        navigator.clipboard.writeText(wechatMatch[1].trim())
+        showToast('success', '微信号已复制')
+      }
+    }
+  }
 
-  const handleMarkSold = async () => {
-    await supabase.from('books').update({ status: '已售出' }).eq('id', bookId);
-    setShowMoreMenu(false);
-    fetchBookData();
-  };
-
-  const handleDelist = async () => {
-    await supabase.from('books').update({ status: '已下架' }).eq('id', bookId);
-    setShowMoreMenu(false);
-    fetchBookData();
-  };
+  const handleCallPhone = () => {
+    if (book?.description) {
+      const phoneMatch = book.description.match(/联系电话：(.+?)[\n\r]/)
+      if (phoneMatch) {
+        window.location.href = `tel:${phoneMatch[1].trim()}`
+      }
+    }
+  }
 
   const handleDelete = async () => {
-    if (!confirm('确定删除此商品？')) return;
-    await supabase.from('books').delete().eq('id', bookId);
-    router.push('/');
-  };
-
-  const condStyle = book?.condition
-    ? conditionColorMap[book.condition] || { bg: '#f5f5f5', text: '#666' }
-    : null;
-
-  if (loading) {
-    return (
-      <div style={{ padding: 16 }}>
-        <SkeletonCard />
-        <SkeletonCard index={1} />
-      </div>
-    );
+    if (!book || !confirm('确定要删除这个商品吗？')) return
+    await supabase.from('books').delete().eq('id', book.id)
+    showToast('success', '已删除')
+    setTimeout(() => router.push('/'), 1000)
   }
 
+  const handleMarkSold = async () => {
+    if (!book) return
+    await supabase.from('books').update({ status: '已售出' }).eq('id', book.id)
+    setBook({ ...book!, status: '已售出' })
+    setShowMore(false)
+    showToast('success', '已标记为售出')
+  }
+
+  const handleOffline = async () => {
+    if (!book) return
+    await supabase.from('books').update({ status: '已下架' }).eq('id', book.id)
+    setBook({ ...book!, status: '已下架' })
+    setShowMore(false)
+    showToast('success', '已下架')
+  }
+
+  const getAllImages = () => {
+    if (!book) return []
+    if (book.images && book.images.length > 0) {
+      return book.images.filter(img => img)
+    }
+    return book.image_url ? [book.image_url] : []
+  }
+
+  if (loading) return <LoadingSpinner />
   if (!book) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>
-        <AlertCircle size={32} />
-        <div style={{ marginTop: 12 }}>商品不存在或已删除</div>
+      <div className="flex flex-col items-center justify-center p-8 py-20">
+        <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <span className="text-4xl">❌</span>
+        </div>
+        <h2 className="text-xl font-semibold mb-2 text-primary">商品不存在</h2>
+        <a href="/" className="btn-primary mt-4">返回首页</a>
       </div>
-    );
+    )
   }
 
+  const isMine = user?.id === book.user_id
+  const allImages = getAllImages()
+
   return (
-    <div style={{ minHeight: '100vh', background: '#F2F2F7', paddingBottom: 100 }}>
-      <style>{`
-        @keyframes heartPop {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.3); }
-          100% { transform: scale(1); }
-        }
-        .heart-btn { transition: transform 0.15s ease; }
-        .heart-btn:active { transform: scale(0.9); }
-        .heart-anim { animation: heartPop 0.3s ease-out; }
-        .glass-fab {
-          width: 56px; height: 56px; border-radius: 50%;
-          background: rgba(255,255,255,0.9);
-          backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(0,0,0,0.06);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; transition: transform 0.15s ease;
-        }
-        .glass-fab:active { transform: scale(0.9); }
-        .detail-card {
-          background: rgba(255,255,255,0.85);
-          backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-          border-radius: 16px; border: 1px solid rgba(0,0,0,0.04);
-          padding: 16px; margin: 0 16px 12px;
-        }
-        .more-overlay {
-          position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 200;
-          display: flex; align-items: flex-end; justify-content: center; padding-bottom: 40px;
-        }
-        .more-sheet {
-          background: #fff; border-radius: 20px 20px 0 0; padding: 8px 0;
-          width: 100%; max-width: 400px; animation: sheetUp 0.25s ease-out;
-        }
-        @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .more-item {
-          display: flex; align-items: center; gap: 12px;
-          padding: 14px 20px; font-size: 15px; color: #1a1a1a;
-          cursor: pointer; transition: background 0.15s;
-        }
-        .more-item:active { background: #f5f5f5; }
-        .more-item.danger { color: #E8590C; }
-        .image-viewer {
-          position: relative; width: 100%; aspect-ratio: 4/3;
-          background: #000; border-radius: 0; overflow: hidden;
-        }
-        .image-nav {
-          position: absolute; top: 50%; transform: translateY(-50%);
-          width: 36px; height: 36px; border-radius: 50%;
-          background: rgba(255,255,255,0.8); backdrop-filter: blur(8px);
-          border: none; display: flex; align-items: center; justify-content: center;
-          cursor: pointer; z-index: 10;
-        }
-        .image-counter {
-          position: absolute; bottom: 12px; right: 12px;
-          padding: 4px 10px; border-radius: 12px;
-          background: rgba(0,0,0,0.5); color: #fff; font-size: 12px; z-index: 10;
-        }
-      `}</style>
+    <div className="pb-20">
+      <div className="fixed top-4 left-4 z-50 max-w-[480px]">
+        <BackButton />
+      </div>
 
-      {/* Header */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 16px',
-        paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))',
-        background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)',
-      }}>
-        <button onClick={() => router.back()} style={{
-          width: 36, height: 36, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.2)', border: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', flexShrink: 0,
-        }}>
-          <ChevronLeft size={20} color="#fff" />
-        </button>
-        <span style={{ fontSize: 17, fontWeight: 600, color: '#fff', flex: 1 }}>
-          {book.title}
-        </span>
-        <button onClick={() => { if (navigator.share) navigator.share({ title: book.title, url: window.location.href }); }} style={{
-          width: 36, height: 36, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.2)', border: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-        }}>
-          <Share2 size={18} color="#fff" />
-        </button>
-      </header>
-
-      {/* Image Viewer */}
-      {allImages.length > 0 && (
-        <div className="image-viewer">
-          <img src={allImages[currentImageIndex]} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+      {/* 图片区域 */}
+      {allImages.length > 0 ? (
+        <div className="relative">
+          <div className="w-full h-[300px] cursor-pointer" onClick={() => setShowImageViewer(true)}>
+            <img src={allImages[currentImageIndex]} alt={book.title} className="w-full h-full object-cover" />
+          </div>
           {allImages.length > 1 && (
-            <>
-              {currentImageIndex > 0 && (
-                <button className="image-nav" style={{ left: 12 }} onClick={() => setCurrentImageIndex(i => i - 1)}>
-                  <ChevronLeft size={18} color="#333" />
-                </button>
-              )}
-              {currentImageIndex < allImages.length - 1 && (
-                <button className="image-nav" style={{ right: 12 }} onClick={() => setCurrentImageIndex(i => i + 1)}>
-                  <ChevronRight size={18} color="#333" />
-                </button>
-              )}
-              <div className="image-counter">{currentImageIndex + 1}/{allImages.length}</div>
-            </>
+            <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full text-xs bg-black/50 text-white">
+              {allImages.length}张图 · 点击可放大
+            </div>
           )}
+          <div className="absolute top-3 left-3 text-white text-xs px-3 py-1 rounded-full bg-green-600">
+            {book.condition}
+          </div>
+        </div>
+      ) : (
+        <div className="w-full h-[200px] flex items-center justify-center bg-gradient-to-br from-warm-50 to-warm-100">
+          <span className="text-7xl">📚</span>
         </div>
       )}
 
-      {/* Price + Tags */}
-      <div className="detail-card" style={{ marginTop: allImages.length > 0 ? 0 : 16 }}>
-        <div style={{ fontSize: 28, fontWeight: 700, color: '#E8590C', marginBottom: 10 }}>
-          &yen;{book.price}
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {book.category && (
-            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, background: 'rgba(245,230,208,0.6)', color: '#8B6914', fontWeight: 500 }}>
-              {book.category}
-            </span>
-          )}
-          {book.condition && condStyle && (
-            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 12, background: condStyle.bg, color: condStyle.text, fontWeight: 500 }}>
-              {book.condition}
-            </span>
+      {/* 价格与标题 */}
+      <div className="p-4 bg-white">
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className="text-3xl font-bold text-accent">¥{book.price}</span>
+          {book.original_price && (
+            <span className="text-sm line-through text-gray-400">原价 ¥{book.original_price}</span>
           )}
         </div>
-      </div>
-
-      {/* Title */}
-      <div className="detail-card">
-        <div style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.4 }}>{book.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#999' }}>
-          <Clock size={12} /><span>{timeAgo(book.created_at)}</span>
+        <h1 className="text-lg font-semibold text-primary">{book.title}</h1>
+        <div className="flex gap-2 mt-3 flex-wrap">
+          <span className="tag tag-primary">{book.category}</span>
+          <span className="tag tag-success">{book.condition}</span>
+          {book.grade && <span className="tag tag-info">{book.grade}</span>}
+          {book.subject && <span className="tag tag-warning">{book.subject}</span>}
         </div>
       </div>
 
-      {/* Book Info */}
-      <div className="detail-card">
-        <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>商品详情</div>
-        {book.isbn && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-            <span style={{ fontSize: 14, color: '#999' }}>ISBN</span>
-            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.isbn}</span>
-          </div>
-        )}
-        {book.author && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-            <span style={{ fontSize: 14, color: '#999' }}>作者</span>
-            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.author}</span>
-          </div>
-        )}
-        {book.publisher && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-            <span style={{ fontSize: 14, color: '#999' }}>出版社</span>
-            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.publisher}</span>
-          </div>
-        )}
-        {book.grades && book.grades.length > 0 && (
-          <div style={{ padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-            <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>适用年级</span>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-              {book.grades.map((g: string) => (
-                <span key={g} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#f0f2f5', color: '#666' }}>{g}</span>
-              ))}
-            </div>
-          </div>
-        )}
-        {book.majors && book.majors.length > 0 && (
-          <div style={{ padding: '8px 0' }}>
-            <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>适用专业</span>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-              {book.majors.map((m: string) => (
-                <span key={m} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#F5E6D0', color: '#8B6914' }}>{m}</span>
-              ))}
-            </div>
-          </div>
-        )}
-        {book.material_type && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-            <span style={{ fontSize: 14, color: '#999' }}>资料类型</span>
-            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.material_type}</span>
-          </div>
-        )}
-        {book.exam_type && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-            <span style={{ fontSize: 14, color: '#999' }}>适用考试</span>
-            <span style={{ fontSize: 14, color: '#1a1a1a' }}>{book.exam_type}</span>
-          </div>
-        )}
-        {book.exam_subjects && book.exam_subjects.length > 0 && (
-          <div style={{ padding: '8px 0' }}>
-            <span style={{ fontSize: 14, color: '#999', marginRight: 12 }}>考试科目</span>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-              {book.exam_subjects.map((s: string) => (
-                <span key={s} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 8, background: '#f0f2f5', color: '#666' }}>{s}</span>
-              ))}
-            </div>
-          </div>
+      {/* 详细信息 */}
+      <div className="mt-2 p-4 bg-white">
+        <h2 className="font-semibold mb-3 text-primary">详细信息</h2>
+        <div className="space-y-2 text-sm">
+          {book.isbn && <div className="flex justify-between"><span className="text-gray-500">ISBN</span><span className="text-primary">{book.isbn}</span></div>}
+          {book.author && <div className="flex justify-between"><span className="text-gray-500">作者</span><span className="text-primary">{book.author}</span></div>}
+          {book.publisher && <div className="flex justify-between"><span className="text-gray-500">出版社</span><span className="text-primary">{book.publisher}</span></div>}
+          <div className="flex justify-between"><span className="text-gray-500">发布时间</span><span className="text-primary">{getTimeAgo(book.created_at)}</span></div>
+        </div>
+        {book.description && (
+          <div className="mt-3 p-3 rounded-xl text-sm bg-gray-50 text-gray-600 whitespace-pre-wrap">{book.description}</div>
         )}
       </div>
 
-      {/* Seller Card */}
-      {seller && (
-        <div className="detail-card">
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>卖家信息</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #F5E6D0, #E0C9A8)', overflow: 'hidden', flexShrink: 0 }}>
-              {seller.avatar_url ? (
-                <img src={seller.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* 卖家信息 */}
+      {book.profiles && (
+        <div className="mt-2 p-4 bg-white">
+          <h2 className="font-semibold mb-3 text-primary">卖家信息</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden bg-gray-100">
+              {book.profiles.avatar_url ? (
+                <img src={book.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <User size={20} color="#8B6914" />
-                </div>
+                <span className="text-2xl">👤</span>
               )}
             </div>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>{seller.nickname || '匿名用户'}</div>
+            <div className="flex-1">
+              <div className="font-medium text-primary">{book.profiles.nickname || '匿名用户'}</div>
+              {book.profiles.school && <div className="text-xs text-gray-400">{book.profiles.school}</div>}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {seller.wechat && (
-              <button onClick={() => handleCopy(seller.wechat!, 'wechat')} style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '10px 0', borderRadius: 12,
-                border: '1px solid rgba(139,105,20,0.15)', background: 'rgba(245,230,208,0.3)',
-                color: '#8B6914', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-              }}>
-                {copiedField === 'wechat' ? <Check size={14} /> : <Copy size={14} />}
-                {copiedField === 'wechat' ? '已复制' : '复制微信'}
-              </button>
-            )}
-            {seller.phone && (
-              <button onClick={() => handleCopy(seller.phone!, 'phone')} style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '10px 0', borderRadius: 12,
-                border: '1px solid rgba(139,105,20,0.15)', background: 'rgba(245,230,208,0.3)',
-                color: '#8B6914', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-              }}>
-                {copiedField === 'phone' ? <Check size={14} /> : <Phone size={14} />}
-                {copiedField === 'phone' ? '已复制' : '复制手机号'}
-              </button>
-            )}
+
+          <div className="flex gap-3">
+            <button onClick={handleCopyWechat} className="flex-1 py-2 rounded-xl text-sm font-medium bg-green-50 text-green-600 border border-green-200 active:scale-95 transition-transform touch-target">
+              复制微信号
+            </button>
+            <button onClick={handleCallPhone} className="flex-1 py-2 rounded-xl text-sm font-medium bg-blue-50 text-blue-600 border border-blue-200 active:scale-95 transition-transform touch-target">
+              拨打电话
+            </button>
           </div>
         </div>
       )}
 
-      {/* Disclaimer */}
-      <Disclaimer variant="detail" />
-
-      {/* Floating Favorite Button */}
-      <div style={{ position: 'fixed', left: 16, bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', zIndex: 150 }}>
-        <button className={`glass-fab heart-btn ${heartAnimating ? 'heart-anim' : ''}`} onClick={toggleFavorite}>
-          <Heart size={24} color={isFavorited ? '#E8590C' : '#999'} fill={isFavorited ? '#E8590C' : 'none'} strokeWidth={isFavorited ? 0 : 1.5} />
-        </button>
+      {/* 安全提示 */}
+      <div className="p-3 mx-4 mt-4 rounded-card bg-amber-50 border-l-4 border-amber-400">
+        <div className="flex items-start gap-2">
+          <span className="text-xl">⚠️</span>
+          <p className="text-sm text-amber-700">本平台仅提供信息撮合服务，不涉及在线支付，请当面交易，谨防诈骗</p>
+        </div>
       </div>
 
-      {/* Owner Floating Button */}
-      {isOwner && (
-        <div style={{ position: 'fixed', right: 16, bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', zIndex: 150 }}>
-          <button className="glass-fab" onClick={() => setShowMoreMenu(true)}>
-            <MoreHorizontal size={22} color="#666" />
+      {/* 底部操作栏 */}
+      <div className="fixed bottom-0 left-0 right-0 p-3 flex gap-3 z-50 bg-white border-t border-gray-100"
+           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+        <button onClick={toggleFavorite} className="flex flex-col items-center gap-1 px-4 py-2 touch-target active:scale-95 transition-transform"
+                style={{ color: isFavorite ? '#ffa06f' : '#666' }}>
+          <span className="text-xl">{isFavorite ? '⭐' : '☆'}</span>
+          <span className="text-xs">{isFavorite ? '已收藏' : '收藏'}</span>
+        </button>
+        {isMine ? (
+          <>
+            <button onClick={() => router.push(`/editItem?id=${book.id}`)} className="flex-1 py-3 rounded-xl text-white font-semibold bg-indigo-500 active:scale-95 transition-transform touch-target">
+              编辑商品
+            </button>
+            <button onClick={() => setShowMore(!showMore)} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 active:scale-95 transition-transform touch-target">
+              更多
+            </button>
+          </>
+        ) : (
+          <button onClick={() => { if (!user) { setShowAuthModal(true) } else { showToast('info', '功能开发中') } }} className="flex-1 py-3 rounded-xl text-white font-semibold bg-accent active:scale-95 transition-transform touch-target">
+            联系卖家
           </button>
+        )}
+      </div>
+
+      {/* 更多操作面板 */}
+      {showMore && isMine && (
+        <div className="fixed bottom-20 left-0 right-0 p-4 z-50 bg-white border-t border-gray-100 animate-slide-up"
+             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <button onClick={handleMarkSold} className="w-full py-3 text-center text-green-600 border-b border-gray-100 active:scale-95 transition-transform touch-target">标记为已售出</button>
+          <button onClick={handleOffline} className="w-full py-3 text-center text-amber-600 border-b border-gray-100 active:scale-95 transition-transform touch-target">下架商品</button>
+          <button onClick={handleDelete} className="w-full py-3 text-center text-red-500 border-b border-gray-100 active:scale-95 transition-transform touch-target">删除商品</button>
+          <button onClick={() => setShowMore(false)} className="w-full py-3 text-center text-gray-500 active:scale-95 transition-transform touch-target">取消</button>
         </div>
       )}
 
-      {/* More Menu Sheet */}
-      {showMoreMenu && (
-        <div className="more-overlay" onClick={() => setShowMoreMenu(false)}>
-          <div className="more-sheet" onClick={e => e.stopPropagation()}>
-            {isOwner && (
-              <>
-                <div className="more-item" onClick={() => { setShowMoreMenu(false); router.push(`/publish?edit=${bookId}`); }}>
-                  <Edit3 size={18} color="#8B6914" /> 编辑
-                </div>
-                <div className="more-item" onClick={handleMarkSold}>
-                  <Tag size={18} color="#8B6914" /> 标记已售出
-                </div>
-                <div className="more-item" onClick={handleDelist}>
-                  <Archive size={18} color="#666" /> 下架
-                </div>
-                <div className="more-item danger" onClick={handleDelete}>
-                  <Trash2 size={18} color="#E8590C" /> 删除
-                </div>
-              </>
+      {/* 图片全屏查看器 */}
+      {showImageViewer && allImages.length > 0 && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 animate-fade-in" onClick={() => setShowImageViewer(false)}>
+          <button onClick={() => setShowImageViewer(false)} className="absolute top-4 right-4 text-white text-2xl z-[110] touch-target active:scale-95 transition-transform">✕</button>
+          <div className="flex items-center justify-between w-full px-4">
+            {currentImageIndex > 0 && (
+              <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex - 1) }} className="text-white text-3xl p-2 touch-target active:scale-95 transition-transform">‹</button>
             )}
-            {!isOwner && (
-              <div className="more-item" onClick={() => setShowMoreMenu(false)}>
-                <X size={18} color="#666" /> 关闭
-              </div>
+            <img src={allImages[currentImageIndex]} alt="" className="max-w-full max-h-[80vh] object-contain" onClick={(e) => e.stopPropagation()} />
+            {currentImageIndex < allImages.length - 1 && (
+              <button onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex + 1) }} className="text-white text-3xl p-2 touch-target active:scale-95 transition-transform">›</button>
             )}
           </div>
+          <div className="absolute bottom-4 text-white text-sm">{currentImageIndex + 1} / {allImages.length}</div>
         </div>
       )}
+
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} onSuccess={() => router.refresh()} />
     </div>
-  );
+  )
 }
