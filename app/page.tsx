@@ -1,34 +1,85 @@
 'use client'
-
-import { useState, useCallback } from 'react'
-import BookList from './BookList'
+import { usePhoneAuth } from '@/hooks/usePhoneAuth'
+import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/BottomNav'
+import AuthModal from '@/components/AuthModal'
 import Toast from '@/components/Toast'
+import { useState } from 'react'
 
-export default function HomePage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc'>('newest')
-  const [filterCategory, setFilterCategory] = useState('')
-  const [showFilter, setShowFilter] = useState(false)
-  const [inputValue, setInputValue] = useState('')
+export default function MyPage() {
+  const { user, loading, logout } = usePhoneAuth()
+  const router = useRouter()
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
-  const categories = ['教材', '备考资料']
+  const handleLogout = () => {
+    if (confirm('确定要退出登录吗？')) {
+      logout()
+    }
+  }
 
-  const handleSearch = useCallback(() => {
-    setSearchQuery(inputValue)
-  }, [inputValue])
+  const menuItems = [
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#FF8C5A" strokeWidth="1.8"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#FF8C5A" strokeWidth="1.8"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#FF8C5A" strokeWidth="1.8"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="#FF8C5A" strokeWidth="1.8"/>
+        </svg>
+      ),
+      label: '我的发布',
+      href: '/my/items',
+    },
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.27 2 8.5C2 5.41 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.08C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.41 22 8.5C22 12.27 18.6 15.36 13.45 20.03L12 21.35Z" stroke="#F59E0B" strokeWidth="1.8" fill="rgba(245, 158, 11, 0.1)"/>
+        </svg>
+      ),
+      label: '我的收藏',
+      href: '/my/favorites',
+    },
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="#10B981" strokeWidth="1.8"/>
+          <path d="M12 7V12L15 15" stroke="#10B981" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      ),
+      label: '交易记录',
+      href: '/my/transactions',
+    },
+  ]
 
-  const sortOptions = [
-    { key: 'newest' as const, label: '最新' },
-    { key: 'price_asc' as const, label: '价格↑' },
-    { key: 'price_desc' as const, label: '价格↓' },
+  const settingItems = [
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="8" r="4" stroke="#6366F1" strokeWidth="1.8"/>
+          <path d="M5 20C5 17.2386 8.13401 15 12 15C15.866 15 19 17.2386 19 20" stroke="#6366F1" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      ),
+      label: '编辑个人信息',
+      href: '/my/profile',
+    },
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="#6B7280" strokeWidth="1.8"/>
+          <path d="M12 8V12M12 16H12.01" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      ),
+      label: '关于新校书仓',
+      href: null,
+      badge: 'v1.0.0',
+    },
   ]
 
   return (
     <div className="pb-24 min-h-screen" style={{ backgroundColor: '#FEFCF9' }}>
       <Toast />
 
-      {/* 顶部渐变头 */}
+      {/* 头部信息 */}
       <div className="relative overflow-hidden">
         <div
           className="absolute inset-0"
@@ -36,173 +87,181 @@ export default function HomePage() {
             background: 'linear-gradient(145deg, #FF8C5A 0%, #FF7A45 30%, #FF6B35 70%, #E5784A 100%)',
           }}
         />
-        {/* 装饰光效 */}
         <div
-          className="absolute -top-24 -right-24 w-48 h-48 rounded-full opacity-20"
-          style={{
-            background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%)',
-          }}
-        />
-        <div
-          className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full opacity-15"
-          style={{
-            background: 'radial-gradient(circle, rgba(255,255,255,0.6) 0%, transparent 70%)',
-          }}
+          className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-20"
+          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%)' }}
         />
 
-        <div className="relative px-4 py-6 text-white safe-area-top">
-          <div className="flex items-center gap-3">
+        <div className="relative px-5 py-8 text-white safe-area-top">
+          <div className="flex items-center gap-4">
+            {/* 头像 */}
             <div
-              className="w-11 h-11 rounded-2xl flex items-center justify-center"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                background: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(8px)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
               }}
             >
-              <span className="text-2xl">📚</span>
+              {user ? (
+                <span className="text-2xl font-bold">{user.nickname?.[0] || '用'}</span>
+              ) : (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="8" r="4" stroke="white" strokeWidth="2"/>
+                  <path d="M5 20C5 17.2386 8.13401 15 12 15C15.866 15 19 17.2386 19 20" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              )}
             </div>
+
             <div className="flex-1">
-              <h1 className="text-xl font-bold tracking-wide">新校书仓</h1>
-              <p className="text-sm opacity-80 mt-0.5">校园二手教材交易平台</p>
+              {loading ? (
+                <div className="space-y-2">
+                  <div className="h-5 w-24 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+                  <div className="h-4 w-32 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                </div>
+              ) : user ? (
+                <>
+                  <div className="text-xl font-bold">{user.nickname}</div>
+                  <div className="text-sm opacity-80 mt-0.5">{user.phone}</div>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    className="text-xl font-bold active:scale-95 transition-transform"
+                  >
+                    登录 / 注册
+                  </button>
+                  <div className="text-sm opacity-80 mt-0.5">登录后查看更多功能</div>
+                </>
+              )}
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* 搜索栏 */}
-      <div className="px-4 py-3 bg-white" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-        <div className="flex gap-2.5">
-          <div className="flex-1 relative">
-            <input
-              className="input pl-10"
-              placeholder="搜索书名、ISBN、资料名"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <svg
-              className="absolute left-3.5 top-1/2 -translate-y-1/2"
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              style={{ color: '#9CA3AF' }}
-            >
-              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M11 11L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </div>
-          <button className="btn-primary px-5 ripple" onClick={handleSearch}>
-            搜索
-          </button>
-        </div>
-      </div>
-
-      {/* 快捷入口 */}
-      <div className="px-4 py-3">
-        <a
-          href="/publish"
-          className="card flex items-center gap-3 p-4 active:scale-[0.98] transition-all duration-200"
-        >
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%)',
-              boxShadow: '0 4px 12px rgba(255, 140, 90, 0.25)',
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <div className="font-semibold" style={{ color: '#1A1A1A' }}>卖书</div>
-            <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>一键发布闲置教材</div>
-          </div>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: '#9CA3AF' }}>
-            <path d="M7 5L12 10L7 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </a>
-      </div>
-
-      {/* 筛选与排序 */}
-      <div className="flex items-center gap-2 px-4 py-2.5 mb-1">
-        <button
-          onClick={() => setShowFilter(!showFilter)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-all duration-200 active:scale-95"
-          style={{
-            backgroundColor: filterCategory ? '#FF8C5A' : '#FFFFFF',
-            color: filterCategory ? '#FFFFFF' : '#6B7280',
-            border: filterCategory ? 'none' : '1px solid #F0E6D8',
-            boxShadow: filterCategory ? '0 2px 8px rgba(255, 140, 90, 0.25)' : 'none',
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M1 2H13M3 7H11M5 12H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          筛选
-        </button>
-
-        {sortOptions.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setSortBy(item.key)}
-            className="px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 active:scale-95"
-            style={{
-              backgroundColor: sortBy === item.key ? '#FF8C5A' : '#FFFFFF',
-              color: sortBy === item.key ? '#FFFFFF' : '#6B7280',
-              border: sortBy === item.key ? 'none' : '1px solid #F0E6D8',
-              boxShadow: sortBy === item.key ? '0 2px 8px rgba(255, 140, 90, 0.25)' : 'none',
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 分类筛选展开 */}
-      {showFilter && (
-        <div
-          className="px-4 py-3 bg-white animate-slide-down"
-          style={{ borderBottom: '1px solid #F0E6D8' }}
-        >
-          <div className="text-xs mb-2.5 font-medium" style={{ color: '#9CA3AF' }}>选择分类</div>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setFilterCategory('')}
-              className="px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 active:scale-95"
-              style={{
-                backgroundColor: !filterCategory ? '#FF8C5A' : '#FEFCF9',
-                color: !filterCategory ? '#FFFFFF' : '#6B7280',
-                border: !filterCategory ? 'none' : '1px solid #F0E6D8',
-                boxShadow: !filterCategory ? '0 2px 8px rgba(255, 140, 90, 0.25)' : 'none',
-              }}
-            >
-              全部
-            </button>
-            {categories.map((cat) => (
+            {user && (
               <button
-                key={cat}
-                onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)}
-                className="px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 active:scale-95"
+                onClick={handleLogout}
+                className="text-sm px-4 py-2 rounded-full active:scale-95 transition-all duration-200"
                 style={{
-                  backgroundColor: filterCategory === cat ? '#FF8C5A' : '#FEFCF9',
-                  color: filterCategory === cat ? '#FFFFFF' : '#6B7280',
-                  border: filterCategory === cat ? 'none' : '1px solid #F0E6D8',
-                  boxShadow: filterCategory === cat ? '0 2px 8px rgba(255, 140, 90, 0.25)' : 'none',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  backdropFilter: 'blur(4px)',
                 }}
               >
-                {cat}
+                退出
               </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {user ? (
+        <div className="px-4 -mt-4 relative z-10 space-y-3">
+          {/* 功能菜单 */}
+          <div className="card overflow-hidden">
+            {menuItems.map((item, index) => (
+              <a
+                key={item.label}
+                href={item.href}
+                className="flex items-center justify-between px-4 py-4 active:scale-[0.98] transition-all duration-200"
+                style={{
+                  borderBottom: index < menuItems.length - 1 ? '1px solid #F3F4F6' : 'none',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: '#FEFCF9' }}
+                  >
+                    {item.icon}
+                  </div>
+                  <span className="font-medium" style={{ color: '#1A1A1A' }}>{item.label}</span>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: '#D1D5DB' }}>
+                  <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </a>
+            ))}
+          </div>
+
+          {/* 设置菜单 */}
+          <div className="card overflow-hidden">
+            {settingItems.map((item, index) => (
+              <div key={item.label}>
+                {item.href ? (
+                  <a
+                    href={item.href}
+                    className="flex items-center justify-between px-4 py-4 active:scale-[0.98] transition-all duration-200"
+                    style={{
+                      borderBottom: index < settingItems.length - 1 ? '1px solid #F3F4F6' : 'none',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: '#FEFCF9' }}
+                      >
+                        {item.icon}
+                      </div>
+                      <span className="font-medium" style={{ color: '#1A1A1A' }}>{item.label}</span>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: '#D1D5DB' }}>
+                      <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </a>
+                ) : (
+                  <div
+                    className="flex items-center justify-between px-4 py-4"
+                    style={{
+                      borderBottom: index < settingItems.length - 1 ? '1px solid #F3F4F6' : 'none',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: '#FEFCF9' }}
+                      >
+                        {item.icon}
+                      </div>
+                      <span className="font-medium" style={{ color: '#1A1A1A' }}>{item.label}</span>
+                    </div>
+                    <span className="text-sm" style={{ color: '#9CA3AF' }}>{item.badge}</span>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center px-8" style={{ minHeight: '50vh' }}>
+          <div
+            className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
+            style={{
+              background: 'linear-gradient(135deg, #FEFCF9 0%, #F5E6D0 100%)',
+            }}
+          >
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="4" stroke="#FF8C5A" strokeWidth="2"/>
+              <path d="M5 20C5 17.2386 8.13401 15 12 15C15.866 15 19 17.2386 19 20" stroke="#FF8C5A" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <p className="text-center mb-6" style={{ color: '#9CA3AF' }}>登录后查看个人信息</p>
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="btn-primary text-lg px-12 py-3 ripple"
+          >
+            登录 / 注册
+          </button>
+        </div>
       )}
 
-      {/* 商品列表 */}
-      <BookList searchQuery={searchQuery} sortBy={sortBy} filterCategory={filterCategory} />
-
       <BottomNav />
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          setShowAuthModal(false)
+          router.refresh()
+        }}
+      />
     </div>
   )
 }
