@@ -452,7 +452,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   ))}
                   <option value="custom">自定义问题</option>
                 </select>
-                {(securityQuestion1 === 'custom' || !fixedQuestions.includes(securityQuestion1)) && (
+                {securityQuestion1 === 'custom' && (
                   <input
                     type="text"
                     className="input mb-2"
@@ -487,7 +487,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   ))}
                   <option value="custom">自定义问题</option>
                 </select>
-                {(securityQuestion2 === 'custom' || !fixedQuestions.includes(securityQuestion2)) && (
+                {securityQuestion2 === 'custom' && (
                   <input
                     type="text"
                     className="input mb-2"
