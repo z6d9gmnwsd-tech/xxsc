@@ -7,8 +7,8 @@ interface BookCardProps {
     id: string;
     title: string;
     price: number;
-    cover_url?: string;
-    image_url?: string;
+    cover_url?: string | null;
+    image_url?: string | null;
     category?: string;
     condition?: string;
     grade?: string;
