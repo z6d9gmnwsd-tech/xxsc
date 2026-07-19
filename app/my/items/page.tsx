@@ -110,7 +110,7 @@ export default function MyItemsPage() {
           </div>
         </div>
         <ItemsSkeleton />
-        <BottomNav activePage="my" />
+        <BottomNav activeTab="profile" />
       </div>
     )
   }
@@ -229,7 +229,7 @@ export default function MyItemsPage() {
         </div>
       )}
 
-      <BottomNav activePage="my" />
+      <BottomNav activeTab="profile" />
     </div>
   )
 }
