@@ -1,88 +1,24 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-
-interface SkeletonCardProps {
-  index?: number;
-}
-
-export function SkeletonCard({ index = 0 }: SkeletonCardProps) {
+export function SkeletonCard() {
   return (
-    <div
-      className="skeleton-card"
-      style={{
-        display: 'flex',
-        gap: 10,
-        padding: 10,
-        marginBottom: 10,
-        borderRadius: 12,
-        background: 'rgba(255,255,255,0.85)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(0,0,0,0.04)',
-        animationDelay: `${index * 80}ms`,
-      }}
-    >
-      <div
-        className="skeleton-shimmer"
-        style={{
-          width: 120,
-          height: 90,
-          borderRadius: 8,
-          flexShrink: 0,
-          background: '#e8e8e8',
-        }}
-      />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
-        <div
-          className="skeleton-shimmer"
-          style={{
-            width: '70%',
-            height: 14,
-            borderRadius: 4,
-            background: '#e8e8e8',
-          }}
-        />
-        <div style={{ display: 'flex', gap: 6 }}>
-          <div
-            className="skeleton-shimmer"
-            style={{
-              width: 40,
-              height: 18,
-              borderRadius: 9,
-              background: '#e8e8e8',
-            }}
-          />
-          <div
-            className="skeleton-shimmer"
-            style={{
-              width: 32,
-              height: 18,
-              borderRadius: 9,
-              background: '#e8e8e8',
-            }}
-          />
+    <div style={{ padding: '0 16px' }}>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="card" style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ width: 120, height: 90, borderRadius: 8 }} className="skeleton-shimmer" />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
+              <div style={{ height: 14, borderRadius: 7, width: '70%' }} className="skeleton-shimmer" />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ height: 18, borderRadius: 9, width: 50 }} className="skeleton-shimmer" />
+                <div style={{ height: 18, borderRadius: 9, width: 60 }} className="skeleton-shimmer" />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ height: 18, borderRadius: 9, width: 60 }} className="skeleton-shimmer" />
+                <div style={{ height: 12, borderRadius: 6, width: 50 }} className="skeleton-shimmer" />
+              </div>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div
-            className="skeleton-shimmer"
-            style={{
-              width: 60,
-              height: 18,
-              borderRadius: 4,
-              background: '#e8e8e8',
-            }}
-          />
-          <div
-            className="skeleton-shimmer"
-            style={{
-              width: 50,
-              height: 10,
-              borderRadius: 4,
-              background: '#e8e8e8',
-            }}
-          />
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
@@ -91,61 +27,32 @@ export function SkeletonList({ count = 3 }: { count?: number }) {
   return (
     <div style={{ padding: '0 16px' }}>
       {Array.from({ length: count }).map((_, i) => (
-        <SkeletonCard key={i} index={i} />
+        <div key={i} className="card" style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ width: 120, height: 90, borderRadius: 8 }} className="skeleton-shimmer" />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}>
+              <div style={{ height: 14, borderRadius: 7, width: '70%' }} className="skeleton-shimmer" />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ height: 18, borderRadius: 9, width: 50 }} className="skeleton-shimmer" />
+                <div style={{ height: 18, borderRadius: 9, width: 60 }} className="skeleton-shimmer" />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ height: 18, borderRadius: 9, width: 60 }} className="skeleton-shimmer" />
+                <div style={{ height: 12, borderRadius: 6, width: 50 }} className="skeleton-shimmer" />
+              </div>
+            </div>
+          </div>
+        </div>
       ))}
     </div>
   );
 }
 
-interface LoadingSpinnerProps {
-  text?: string;
-  size?: number;
-}
-
-export default function LoadingSpinner({ text, size = 32 }: LoadingSpinnerProps) {
-  const [dots, setDots] = useState('');
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDots(prev => (prev.length >= 3 ? '' : prev + '.'));
-    }, 400);
-    return () => clearInterval(interval);
-  }, []);
-
+export default function LoadingSpinner({ text = '加载中...' }: { text?: string }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '60px 20px',
-        gap: 12,
-      }}
-    >
-      <div
-        className="spinner"
-        style={{
-          width: size,
-          height: size,
-          border: '3px solid rgba(91,140,90,0.15)',
-          borderTopColor: '#5B8C5A',
-          borderRadius: '50%',
-        }}
-      />
-      {text && (
-        <span style={{ fontSize: 13, color: '#999' }}>
-          {text}{dots}
-        </span>
-      )}
-      <style>{`
-        .spinner {
-          animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+    <div style={{ padding: '40px 16px', textAlign: 'center', color: '#bbb' }}>
+      <div style={{ fontSize: 24, marginBottom: 8 }} className="animate-spin">⏳</div>
+      {text}
     </div>
   );
 }
