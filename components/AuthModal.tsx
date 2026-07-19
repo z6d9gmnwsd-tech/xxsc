@@ -67,43 +67,56 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
   const validatePhone = (p: string) => /^1[3-9]\d{9}$/.test(p)
 
+  const sanitizeInput = (input: string) => {
+    return input.replace(/[<>]/g, '').trim()
+  }
+
   const handleLogin = async () => {
     if (!phone || !password) {
       setError('请输入手机号和密码')
       return
     }
     if (!validatePhone(phone)) {
-      setError('请输入正确的手机号')
+      setError('请输入正确的11位手机号')
+      return
+    }
+    if (password.length < 6) {
+      setError('密码至少需要6个字符')
       return
     }
 
     setLoading(true)
     setError('')
 
-    const { data, error: funcError } = await supabase.rpc('login_user', {
-      p_phone: phone,
-      p_password: password
-    })
+    try {
+      const { data, error: funcError } = await supabase.rpc('login_user', {
+        p_phone: phone,
+        p_password: password
+      })
 
+      if (funcError) {
+        setError('登录失败：' + funcError.message)
+        setLoading(false)
+        return
+      }
+
+      if (data && data.success) {
+        localStorage.setItem('user_id', data.user_id)
+        localStorage.setItem('nickname', data.nickname)
+        localStorage.setItem('phone', phone)
+        setSuccess('登录成功！')
+        setTimeout(() => {
+          onSuccess()
+          handleClose()
+        }, 1000)
+      } else {
+        setError(data?.message || '登录失败')
+      }
+    } catch (err) {
+      setError('网络错误，请检查网络后重试')
+      console.error('Login error:', err)
+    }
     setLoading(false)
-
-    if (funcError) {
-      setError('登录失败：' + funcError.message)
-      return
-    }
-
-    if (data && data.success) {
-      localStorage.setItem('user_id', data.user_id)
-      localStorage.setItem('nickname', data.nickname)
-      localStorage.setItem('phone', phone)
-      setSuccess('登录成功！')
-      setTimeout(() => {
-        onSuccess()
-        handleClose()
-      }, 1000)
-    } else {
-      setError(data?.message || '登录失败')
-    }
   }
 
   const handleRegister = async () => {
@@ -112,11 +125,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       return
     }
     if (!validatePhone(phone)) {
-      setError('请输入正确的手机号')
+      setError('请输入正确的11位手机号')
       return
     }
     if (password.length < 6) {
       setError('密码至少需要6个字符')
+      return
+    }
+    if (password.length > 50) {
+      setError('密码不能超过50个字符')
       return
     }
     if (password !== confirmPassword) {
@@ -124,8 +141,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       return
     }
 
-    const question1 = customQuestion1 || securityQuestion1
-    const question2 = customQuestion2 || securityQuestion2
+    const question1 = sanitizeInput(customQuestion1 || securityQuestion1)
+    const question2 = sanitizeInput(customQuestion2 || securityQuestion2)
     if (!question1 || !question2) {
       setError('请选择或输入两个密保问题')
       return
@@ -134,38 +151,47 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       setError('两个密保问题不能相同')
       return
     }
+    if (sanitizeInput(securityAnswer1).length < 2 || sanitizeInput(securityAnswer2).length < 2) {
+      setError('密保答案至少需要2个字符')
+      return
+    }
 
     setLoading(true)
     setError('')
 
-    const { data, error: funcError } = await supabase.rpc('register_user', {
-      p_phone: phone,
-      p_password: password,
-      p_security_question1: question1,
-      p_security_answer1: securityAnswer1,
-      p_security_question2: question2,
-      p_security_answer2: securityAnswer2
-    })
+    try {
+      const { data, error: funcError } = await supabase.rpc('register_user', {
+        p_phone: phone,
+        p_password: password,
+        p_security_question1: question1,
+        p_security_answer1: sanitizeInput(securityAnswer1),
+        p_security_question2: question2,
+        p_security_answer2: sanitizeInput(securityAnswer2)
+      })
 
+      if (funcError) {
+        setError('注册失败：' + funcError.message)
+        setLoading(false)
+        return
+      }
+
+      if (data && data.success) {
+        localStorage.setItem('user_id', data.user_id)
+        localStorage.setItem('nickname', data.nickname)
+        localStorage.setItem('phone', phone)
+        setSuccess('注册成功！您的用户名是：' + data.nickname)
+        setTimeout(() => {
+          onSuccess()
+          handleClose()
+        }, 2000)
+      } else {
+        setError(data?.message || '注册失败')
+      }
+    } catch (err) {
+      setError('网络错误，请检查网络后重试')
+      console.error('Register error:', err)
+    }
     setLoading(false)
-
-    if (funcError) {
-      setError('注册失败：' + funcError.message)
-      return
-    }
-
-    if (data && data.success) {
-      localStorage.setItem('user_id', data.user_id)
-      localStorage.setItem('nickname', data.nickname)
-      localStorage.setItem('phone', phone)
-      setSuccess('注册成功！您的用户名是：' + data.nickname)
-      setTimeout(() => {
-        onSuccess()
-        handleClose()
-      }, 2000)
-    } else {
-      setError(data?.message || '注册失败')
-    }
   }
 
   const handleVerifyAnswer = async () => {
@@ -173,7 +199,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       setError('请输入手机号')
       return
     }
-    if (!securityAnswer1) {
+    if (!validatePhone(phone)) {
+      setError('请输入正确的11位手机号')
+      return
+    }
+    if (!securityAnswer1 || sanitizeInput(securityAnswer1).length < 1) {
       setError('请输入密保答案')
       return
     }
@@ -181,19 +211,31 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setLoading(true)
     setError('')
 
-    const { data: data1 } = await supabase.rpc('verify_security_answer', {
-      p_phone: phone,
-      p_answer: securityAnswer1
-    })
+    try {
+      const { data: data1, error: funcError } = await supabase.rpc('verify_security_answer', {
+        p_phone: phone,
+        p_answer: sanitizeInput(securityAnswer1)
+      })
 
-    if (data1 && data1.success) {
+      if (funcError) {
+        setError('验证失败：' + funcError.message)
+        setLoading(false)
+        return
+      }
+
+      if (data1 && data1.success) {
+        setLoading(false)
+        setStep('reset')
+        return
+      }
+
       setLoading(false)
-      setStep('reset')
-      return
+      setError(data1?.message || '密保答案错误')
+    } catch (err) {
+      setError('网络错误，请检查网络后重试')
+      console.error('Verify error:', err)
+      setLoading(false)
     }
-
-    setLoading(false)
-    setError(data1?.message || '密保答案错误')
   }
 
   const handleResetPassword = async () => {
@@ -205,6 +247,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       setError('密码至少需要6个字符')
       return
     }
+    if (password.length > 50) {
+      setError('密码不能超过50个字符')
+      return
+    }
     if (password !== confirmPassword) {
       setError('两次输入的密码不一致')
       return
@@ -213,27 +259,32 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setLoading(true)
     setError('')
 
-    const { data, error: funcError } = await supabase.rpc('reset_password', {
-      p_phone: phone,
-      p_new_password: password
-    })
+    try {
+      const { data, error: funcError } = await supabase.rpc('reset_password', {
+        p_phone: phone,
+        p_new_password: password
+      })
 
+      if (funcError) {
+        setError('重置失败：' + funcError.message)
+        setLoading(false)
+        return
+      }
+
+      if (data && data.success) {
+        setSuccess('密码重置成功！请使用新密码登录')
+        setTimeout(() => {
+          resetForm()
+          setStep('login')
+        }, 2000)
+      } else {
+        setError(data?.message || '重置失败')
+      }
+    } catch (err) {
+      setError('网络错误，请检查网络后重试')
+      console.error('Reset error:', err)
+    }
     setLoading(false)
-
-    if (funcError) {
-      setError('重置失败：' + funcError.message)
-      return
-    }
-
-    if (data && data.success) {
-      setSuccess('密码重置成功！请使用新密码登录')
-      setTimeout(() => {
-        resetForm()
-        setStep('login')
-      }, 2000)
-    } else {
-      setError(data?.message || '重置失败')
-    }
   }
 
   if (!isOpen) return null
@@ -245,10 +296,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       }`}
       onClick={handleClose}
     >
-      {/* 背景遮罩 */}
       <div className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} />
 
-      {/* 模态框 */}
       <div
         className={`
           relative bg-white w-full max-w-md overflow-hidden rounded-2xl
@@ -258,7 +307,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         style={{ boxShadow: '0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 头部 */}
         <div
           className="relative px-6 py-5 text-white overflow-hidden"
           style={{
@@ -276,7 +324,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             </h2>
             <button
               onClick={handleClose}
-              className="touch-target text-white/80 hover:text-white active:scale-90 transition-all duration-150 rounded-xl hover:bg-white/10"
+              disabled={loading}
+              className="touch-target text-white/80 hover:text-white active:scale-90 transition-all duration-150 rounded-xl hover:bg-white/10 disabled:opacity-50"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -285,7 +334,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           </div>
         </div>
 
-        {/* 内容 */}
         <div className="p-6 max-h-[60vh] overflow-y-auto scroll-container">
           {error && (
             <div className="mb-4 p-3 rounded-xl text-center text-sm bg-red-50 text-red-600 animate-fade-in border border-red-100">
@@ -306,9 +354,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 <input
                   type="tel"
                   className="input"
-                  placeholder="请输入手机号"
+                  placeholder="请输入11位手机号"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  disabled={loading}
+                  maxLength={11}
                 />
               </div>
               <div>
@@ -316,28 +366,32 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 <input
                   type="password"
                   className="input"
-                  placeholder="请输入密码"
+                  placeholder="请输入密码（至少6位）"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  maxLength={50}
                 />
               </div>
               <button
                 onClick={handleLogin}
                 disabled={loading}
-                className="btn-primary w-full ripple"
+                className="btn-primary w-full ripple disabled:opacity-50"
               >
                 {loading ? '登录中...' : '登录'}
               </button>
               <div className="flex justify-between text-sm">
                 <button
-                  onClick={() => { resetForm(); setStep('register') }}
-                  className="text-accent font-medium active:scale-95 transition-transform"
+                  onClick={() => { if (!loading) { resetForm(); setStep('register') } }}
+                  disabled={loading}
+                  className="text-accent font-medium active:scale-95 transition-transform disabled:opacity-50"
                 >
                   注册账号
                 </button>
                 <button
-                  onClick={() => { resetForm(); setStep('forgot') }}
-                  className="text-tertiary active:scale-95 transition-transform"
+                  onClick={() => { if (!loading) { resetForm(); setStep('forgot') } }}
+                  disabled={loading}
+                  className="text-tertiary active:scale-95 transition-transform disabled:opacity-50"
                 >
                   忘记密码？
                 </button>
@@ -352,9 +406,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 <input
                   type="tel"
                   className="input"
-                  placeholder="请输入手机号"
+                  placeholder="请输入11位手机号"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  disabled={loading}
+                  maxLength={11}
                 />
               </div>
               <div>
@@ -365,6 +421,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   placeholder="请输入密码（至少6位）"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  maxLength={50}
                 />
                 <p className="text-xs mt-1.5 text-accent">密码是您的唯一登录方式，请牢牢记住！</p>
               </div>
@@ -376,6 +434,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   placeholder="请再次输入密码"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  maxLength={50}
                 />
               </div>
               <div>
@@ -384,6 +444,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   className="input mb-2"
                   value={securityQuestion1}
                   onChange={(e) => { setSecurityQuestion1(e.target.value); setCustomQuestion1(''); }}
+                  disabled={loading}
                 >
                   <option value="">选择或自定义问题</option>
                   {fixedQuestions.map((q) => (
@@ -398,6 +459,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                     placeholder="请输入自定义问题"
                     value={customQuestion1}
                     onChange={(e) => setCustomQuestion1(e.target.value)}
+                    disabled={loading}
+                    maxLength={100}
                   />
                 )}
                 <input
@@ -406,6 +469,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   placeholder="请输入密保答案"
                   value={securityAnswer1}
                   onChange={(e) => setSecurityAnswer1(e.target.value)}
+                  disabled={loading}
+                  maxLength={100}
                 />
               </div>
               <div>
@@ -414,6 +479,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   className="input mb-2"
                   value={securityQuestion2}
                   onChange={(e) => { setSecurityQuestion2(e.target.value); setCustomQuestion2(''); }}
+                  disabled={loading}
                 >
                   <option value="">选择或自定义问题</option>
                   {fixedQuestions.map((q) => (
@@ -428,6 +494,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                     placeholder="请输入自定义问题"
                     value={customQuestion2}
                     onChange={(e) => setCustomQuestion2(e.target.value)}
+                    disabled={loading}
+                    maxLength={100}
                   />
                 )}
                 <input
@@ -436,18 +504,21 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   placeholder="请输入密保答案"
                   value={securityAnswer2}
                   onChange={(e) => setSecurityAnswer2(e.target.value)}
+                  disabled={loading}
+                  maxLength={100}
                 />
               </div>
               <button
                 onClick={handleRegister}
                 disabled={loading}
-                className="btn-primary w-full ripple"
+                className="btn-primary w-full ripple disabled:opacity-50"
               >
                 {loading ? '注册中...' : '注册'}
               </button>
               <button
-                onClick={() => { resetForm(); setStep('login') }}
-                className="w-full text-center text-sm text-tertiary active:scale-95 transition-transform"
+                onClick={() => { if (!loading) { resetForm(); setStep('login') } }}
+                disabled={loading}
+                className="w-full text-center text-sm text-tertiary active:scale-95 transition-transform disabled:opacity-50"
               >
                 已有账号？去登录
               </button>
@@ -462,23 +533,27 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 <input
                   type="tel"
                   className="input"
-                  placeholder="请输入手机号"
+                  placeholder="请输入11位手机号"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  disabled={loading}
+                  maxLength={11}
                 />
               </div>
               <button
                 onClick={() => {
                   if (phone && validatePhone(phone)) setStep('verify')
-                  else setError('请输入正确的手机号')
+                  else setError('请输入正确的11位手机号')
                 }}
-                className="btn-primary w-full ripple"
+                disabled={loading}
+                className="btn-primary w-full ripple disabled:opacity-50"
               >
                 下一步
               </button>
               <button
-                onClick={() => { resetForm(); setStep('login') }}
-                className="w-full text-center text-sm text-tertiary active:scale-95 transition-transform"
+                onClick={() => { if (!loading) { resetForm(); setStep('login') } }}
+                disabled={loading}
+                className="w-full text-center text-sm text-tertiary active:scale-95 transition-transform disabled:opacity-50"
               >
                 返回登录
               </button>
@@ -496,18 +571,21 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   placeholder="请输入密保答案"
                   value={securityAnswer1}
                   onChange={(e) => setSecurityAnswer1(e.target.value)}
+                  disabled={loading}
+                  maxLength={100}
                 />
               </div>
               <button
                 onClick={handleVerifyAnswer}
                 disabled={loading}
-                className="btn-primary w-full ripple"
+                className="btn-primary w-full ripple disabled:opacity-50"
               >
                 {loading ? '验证中...' : '验证'}
               </button>
               <button
-                onClick={() => { resetForm(); setStep('forgot') }}
-                className="w-full text-center text-sm text-tertiary active:scale-95 transition-transform"
+                onClick={() => { if (!loading) { resetForm(); setStep('forgot') } }}
+                disabled={loading}
+                className="w-full text-center text-sm text-tertiary active:scale-95 transition-transform disabled:opacity-50"
               >
                 返回
               </button>
@@ -525,6 +603,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   placeholder="请输入新密码（至少6位）"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  maxLength={50}
                 />
               </div>
               <div>
@@ -535,12 +615,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                   placeholder="请再次输入新密码"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  maxLength={50}
                 />
               </div>
               <button
                 onClick={handleResetPassword}
                 disabled={loading}
-                className="btn-primary w-full ripple"
+                className="btn-primary w-full ripple disabled:opacity-50"
               >
                 {loading ? '重置中...' : '重置密码'}
               </button>
