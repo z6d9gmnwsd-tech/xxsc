@@ -1,136 +1,159 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { usePhoneAuth } from '@/hooks/usePhoneAuth'
-import BookList from './BookList'
-import BottomNav from '@/components/BottomNav'
-import AuthModal from '@/components/AuthModal'
-import { Search, ArrowRightLeft, BookOpen } from 'lucide-react'
+import { useState } from 'react';
+import { Search, SlidersHorizontal, BookOpen } from 'lucide-react';
+import BookCard from '@/components/BookCard';
+import BottomNav from '@/components/BottomNav';
+import EmptyState from '@/components/EmptyState';
+import LoadingSpinner from '@/components/LoadingSpinner';
+
+const categories = ['全部', '教材', '备考资料', '考研', '四六级', '计算机', '文学'];
+
+const sortOptions = [
+  { id: 'latest', label: '最新' },
+  { id: 'price_asc', label: '价格↑' },
+  { id: 'price_desc', label: '价格↓' },
+];
+
+// Mock data
+const mockBooks = [
+  {
+    id: '1',
+    title: '高等数学（第七版）上册',
+    price: 15.0,
+    condition: '九成新',
+    thumbnail: '',
+    tags: ['教材', '考研'],
+  },
+  {
+    id: '2',
+    title: '大学英语综合教程4（第二版）',
+    price: 12.5,
+    condition: '八成新',
+    thumbnail: '',
+    tags: ['教材', '四六级'],
+  },
+  {
+    id: '3',
+    title: '数据结构（C语言版）清华大学出版社',
+    price: 18.0,
+    condition: '全新',
+    thumbnail: '',
+    tags: ['教材', '计算机'],
+  },
+  {
+    id: '4',
+    title: '线性代数及其应用（第五版）',
+    price: 8.0,
+    condition: '七成新及以下',
+    thumbnail: '',
+    tags: ['教材'],
+  },
+  {
+    id: '5',
+    title: '考研英语词汇闪过',
+    price: 22.0,
+    condition: '九成新',
+    thumbnail: '',
+    tags: ['备考资料', '考研'],
+  },
+];
 
 export default function HomePage() {
-  const { user, loading } = usePhoneAuth()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc'>('newest')
-  const [filterCategory, setFilterCategory] = useState('')
-  const [showFilter, setShowFilter] = useState(false)
-  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [activeCategory, setActiveCategory] = useState('全部');
+  const [activeSort, setActiveSort] = useState('latest');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading] = useState(false);
 
-  const categories = ['教材', '考研', '考公', '技能证书', '其他']
+  const handleTabChange = (tab: string) => {
+    if (tab === 'favorites') {
+      window.location.href = '/favorites';
+    } else if (tab === 'profile') {
+      window.location.href = '/my';
+    }
+  };
 
-  const handleAction = (action: string) => {
-    if (!user) {
-      if (confirm('该功能需要登录后才能使用，是否前往登录？')) {
-        window.location.href = '/my'
-      }
-      return
-    }
-    if (action === 'publish') {
-      window.location.href = '/publish'
-    } else if (action === 'want') {
-      window.location.href = '/want'
-    }
-  }
+  const handlePublish = () => {
+    window.location.href = '/publish';
+  };
 
   return (
-    <div className="animate-fade-in">
-      <div className="header-glass px-4 py-5 text-white">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{background: 'rgba(255,255,255,0.2)'}}>
-            <BookOpen size={20} />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold tracking-wide">新校书仓</h1>
-            <p className="text-xs" style={{opacity: 0.7}}>校园二手教材交易平台</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 py-3" style={{background: '#fff'}}>
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{color: '#bbb'}} />
-            <input
-              className="input pl-9"
-              style={{paddingTop: '10px', paddingBottom: '10px'}}
-              placeholder="搜索书名、ISBN、资料名"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && setSearchQuery((e.target as HTMLInputElement).value)}
-            />
-          </div>
-          <button className="btn-primary px-5" onClick={() => setSearchQuery(searchQuery)}>搜索</button>
-        </div>
-      </div>
-
-      <div className="flex gap-3 px-4 py-4">
-        <div onClick={() => handleAction('want')} className="flex-1 flex items-center gap-3 p-4 rounded-2xl cursor-pointer card-interactive" style={{background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(224,213,200,0.5)'}}>
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{background: 'linear-gradient(135deg, #F5E6D0, #E0C9A8)'}}>
-            <ArrowRightLeft size={18} style={{color: '#8B6914'}} />
-          </div>
-          <div>
-            <div className="text-sm font-semibold" style={{color: '#1a1a1a'}}>求购广场</div>
-            <div className="text-[11px]" style={{color: '#999'}}>发布你的需求</div>
-          </div>
-        </div>
-        <div onClick={() => handleAction('publish')} className="flex-1 flex items-center gap-3 p-4 rounded-2xl cursor-pointer card-interactive" style={{background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(224,213,200,0.5)'}}>
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{background: 'linear-gradient(135deg, #ffa06f, #E5D5BF)'}}>
-            <BookOpen size={18} style={{color: '#fff'}} />
-          </div>
-          <div>
-            <div className="text-sm font-semibold" style={{color: '#1a1a1a'}}>卖书</div>
-            <div className="text-[11px]" style={{color: '#999'}}>一键发布闲置</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 px-4 py-3 mb-2" style={{background: '#fff'}}>
-        <button
-          onClick={() => setShowFilter(!showFilter)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
-          style={{
-            background: filterCategory ? 'linear-gradient(135deg, #F5E6D0, #E0C9A8)' : '#f5f5f5',
-            color: filterCategory ? '#fff' : '#666',
-          }}
-        >
-          <Search size={12} /> 筛选
-        </button>
-        {['price_asc', 'price_desc', 'newest'].map((s) => (
-          <button
-            key={s}
-            onClick={() => setSortBy(s as any)}
-            className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
-            style={{
-              background: sortBy === s ? 'linear-gradient(135deg, #F5E6D0, #E0C9A8)' : '#f5f5f5',
-              color: sortBy === s ? '#fff' : '#666',
-            }}
-          >
-            {s === 'price_asc' ? '价格↑' : s === 'price_desc' ? '价格↓' : '最新'}
-          </button>
-        ))}
-      </div>
-
-      {showFilter && (
-        <div className="px-4 py-3 border-b animate-slide-down" style={{background: '#fff', borderColor: '#f0f0f0'}}>
-          <div className="text-[11px] mb-2 font-medium" style={{color: '#999'}}>选择分类</div>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setFilterCategory('')}
-              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
+    <div className="page-container">
+      {/* Header */}
+      <header className="header-glass safe-area-top">
+        <div className="px-4 pt-3 pb-3">
+          {/* Brand + Title */}
+          <div className="flex items-center gap-2 mb-3">
+            <div
+              className="flex items-center justify-center rounded-lg"
               style={{
-                background: !filterCategory ? 'linear-gradient(135deg, #F5E6D0, #E0C9A8)' : '#f5f5f5',
-                color: !filterCategory ? '#fff' : '#666',
+                width: 32,
+                height: 32,
+                background: 'linear-gradient(135deg, #5B8C5A, #40916C)',
               }}
             >
-              全部
-            </button>
+              <BookOpen size={18} color="#FFFFFF" strokeWidth={2} />
+            </div>
+            <h1 className="text-lg font-semibold" style={{ color: '#333333' }}>
+              校书仓
+            </h1>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search
+              size={18}
+              color="#999999"
+              className="absolute left-3 top-1/2 -translate-y-1/2"
+            />
+            <input
+              type="text"
+              placeholder="搜索书名、ISBN..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input"
+              style={{
+                paddingLeft: 38,
+                paddingRight: 14,
+                height: 40,
+                borderRadius: 'var(--radius-pill)',
+                background: 'rgba(242, 242, 247, 0.8)',
+                border: 'none',
+              }}
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* Category Tabs */}
+      <div
+        className="sticky top-0 z-40"
+        style={{
+          background: 'rgba(242, 242, 247, 0.95)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        <div className="px-4 pt-3 pb-2">
+          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {categories.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300"
+                onClick={() => setActiveCategory(cat)}
+                className="tag whitespace-nowrap"
                 style={{
-                  background: filterCategory === cat ? 'linear-gradient(135deg, #F5E6D0, #E0C9A8)' : '#f5f5f5',
-                  color: filterCategory === cat ? '#fff' : '#666',
+                  background:
+                    activeCategory === cat
+                      ? 'var(--color-primary)'
+                      : 'rgba(255, 255, 255, 0.8)',
+                  color:
+                    activeCategory === cat ? '#FFFFFF' : 'var(--color-text-secondary)',
+                  padding: '5px 14px',
+                  fontSize: 13,
+                  fontWeight: activeCategory === cat ? 600 : 400,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
                 }}
               >
                 {cat}
@@ -138,19 +161,73 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      )}
 
-      <div className="pb-20">
-        <BookList searchQuery={searchQuery} sortBy={sortBy} filterCategory={filterCategory} />
+        {/* Sort Buttons */}
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal size={14} color="#999999" />
+            <div className="flex gap-3">
+              {sortOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setActiveSort(opt.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontSize: 13,
+                    color:
+                      activeSort === opt.id
+                        ? 'var(--color-primary)'
+                        : 'var(--color-text-tertiary)',
+                    fontWeight: activeSort === opt.id ? 600 : 400,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <BottomNav activePage="home" />
+      {/* Content */}
+      <div className="px-4 pt-3">
+        {loading ? (
+          <LoadingSpinner />
+        ) : mockBooks.length === 0 ? (
+          <EmptyState
+            icon="book"
+            title="暂无书籍"
+            description="还没有人发布书籍，快来发布第一本吧"
+            action={{ label: '去发布', href: '/publish' }}
+          />
+        ) : (
+          <div className="space-y-3">
+            {mockBooks.map((book, index) => (
+              <BookCard
+                key={book.id}
+                id={book.id}
+                title={book.title}
+                price={book.price}
+                condition={book.condition}
+                thumbnail={book.thumbnail}
+                tags={book.tags}
+                index={index}
+                onClick={() => (window.location.href = `/book/${book.id}`)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={() => {}}
+      {/* Bottom Nav */}
+      <BottomNav
+        activeTab="home"
+        onTabChange={handleTabChange}
+        onPublish={handlePublish}
       />
     </div>
-  )
+  );
 }
