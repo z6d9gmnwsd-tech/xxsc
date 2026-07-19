@@ -43,37 +43,46 @@ export default function Toast({ show, type, message }: ToastProps) {
     }
   }
 
-  const getBgColor = () => {
+  const getStyles = () => {
     switch (type) {
-      case 'success': return 'bg-emerald-50 border-emerald-200'
-      case 'error': return 'bg-red-50 border-red-200'
-      case 'info': return 'bg-blue-50 border-blue-200'
+      case 'success':
+        return {
+          bg: '#ECFDF5',
+          border: '#A7F3D0',
+          text: '#15803D',
+        }
+      case 'error':
+        return {
+          bg: '#FEF2F2',
+          border: '#FECACA',
+          text: '#B91C1C',
+        }
+      case 'info':
+        return {
+          bg: '#EFF6FF',
+          border: '#BFDBFE',
+          text: '#1D4ED8',
+        }
     }
   }
 
-  const getTextColor = () => {
-    switch (type) {
-      case 'success': return 'text-emerald-700'
-      case 'error': return 'text-red-700'
-      case 'info': return 'text-blue-700'
-    }
-  }
+  const styles = getStyles()
 
   return (
     <div
-      className={`
-        fixed top-12 left-1/2 -translate-x-1/2 z-[100]
-        px-4 py-3 rounded-xl border
-        flex items-center gap-2.5
-        shadow-card-hover backdrop-blur-sm
-        transition-all duration-300 ease-ios
-        ${getBgColor()}
-        ${show ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-95'}
-        max-w-[calc(100%-2rem)]
-      `}
+      className="fixed left-1/2 -translate-x-1/2 z-[100] px-4 py-3 rounded-xl border flex items-center gap-2.5 backdrop-blur-sm transition-all duration-300 max-w-[calc(100%-2rem)]"
+      style={{
+        top: '48px',
+        backgroundColor: styles?.bg,
+        borderColor: styles?.border,
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
+        transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        opacity: show ? 1 : 0,
+        transform: `translateX(-50%) translateY(${show ? '0' : '-8px'}) scale(${show ? '1' : '0.95'})`,
+      }}
     >
       <div className="flex-shrink-0">{getIcon()}</div>
-      <span className={`text-sm font-medium ${getTextColor()}`}>
+      <span className="text-sm font-medium" style={{ color: styles?.text }}>
         {message}
       </span>
     </div>
