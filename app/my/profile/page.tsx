@@ -8,21 +8,22 @@ import BackButton from '@/components/BackButton'
 import { showToast } from '@/components/Toast'
 
 export default function ProfilePage() {
-  const { user, logout } = usePhoneAuth()
+  const { user, loading } = usePhoneAuth()
   const router = useRouter()
   const [nickname, setNickname] = useState('')
   const [school, setSchool] = useState('')
   const [bio, setBio] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => {
+    if (loading) return
     if (!user) {
       router.push('/my')
       return
     }
     loadProfile()
-  }, [user])
+  }, [user, loading])
 
   const loadProfile = async () => {
     if (!user) return
@@ -47,7 +48,7 @@ export default function ProfilePage() {
       return
     }
 
-    setLoading(true)
+    setSaving(true)
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -57,7 +58,7 @@ export default function ProfilePage() {
       })
       .eq('id', user.id)
 
-    setLoading(false)
+    setSaving(false)
 
     if (error) {
       showToast('error', '保存失败：' + error.message)
@@ -69,7 +70,7 @@ export default function ProfilePage() {
     setTimeout(() => router.push('/my'), 1500)
   }
 
-  if (loadingData) {
+  if (loading || loadingData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="inline-block w-8 h-8 border-2 border-warm-200 border-t-accent rounded-full animate-spin" />
@@ -106,8 +107,8 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <button onClick={handleSave} disabled={loading} className="btn-primary w-full disabled:opacity-50">
-          {loading ? '保存中...' : '保存修改'}
+        <button onClick={handleSave} disabled={saving} className="btn-primary w-full disabled:opacity-50">
+          {saving ? '保存中...' : '保存修改'}
         </button>
       </div>
     </div>
