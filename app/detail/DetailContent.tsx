@@ -8,7 +8,7 @@ import { getTimeAgo } from '@/lib/utils'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import BackButton from '@/components/BackButton'
 import AuthModal from '@/components/AuthModal'
-import { showToast } from '@/components/Toast'
+import Toast, { showToast } from '@/components/Toast'
 import { BookWithProfile } from '@/types'
 
 export default function DetailContent() {
@@ -109,6 +109,10 @@ export default function DetailContent() {
     }
   }
 
+  const handleShare = () => {
+    showToast('info', '分享功能开发中')
+  }
+
   const handleCopyWechat = () => {
     if (book?.description) {
       const wechatMatch = book.description.match(/微信号：(.+?)[\n\r]/)
@@ -126,6 +130,10 @@ export default function DetailContent() {
         window.location.href = `tel:${phoneMatch[1].trim()}`
       }
     }
+  }
+
+  const handleReport = () => {
+    showToast('info', '举报功能开发中')
   }
 
   const handleDelete = async () => {
@@ -174,6 +182,18 @@ export default function DetailContent() {
     return book.image_url ? [book.image_url] : []
   }
 
+  const getWechat = () => {
+    if (!book?.description) return ''
+    const match = book.description.match(/微信号：(.+?)[\n\r]/)
+    return match ? match[1].trim() : ''
+  }
+
+  const getPhone = () => {
+    if (!book?.description) return ''
+    const match = book.description.match(/联系电话：(.+?)[\n\r]/)
+    return match ? match[1].trim() : ''
+  }
+
   if (loading) return <LoadingSpinner />
   if (!book) {
     return (
@@ -189,14 +209,18 @@ export default function DetailContent() {
 
   const isMine = user?.id === book.user_id
   const allImages = getAllImages()
+  const wechat = getWechat()
+  const phoneNum = getPhone()
 
   return (
-    <div className="pb-20">
+    <div className="pb-20 min-h-screen" style={{ backgroundColor: '#FEFCF9' }}>
+      <Toast />
+
       <div className="fixed top-4 left-4 z-50 max-w-[480px]">
         <BackButton />
       </div>
 
-      {allImages.length > 0 ? (
+      {allImages.length > 0 && (
         <div className="relative">
           <div className="w-full h-[300px] cursor-pointer" onClick={() => setShowImageViewer(true)}>
             <img src={allImages[currentImageIndex]} alt={book.title} className="w-full h-full object-cover" loading="lazy" />
@@ -206,90 +230,144 @@ export default function DetailContent() {
               {allImages.length}张图 · 点击可放大
             </div>
           )}
-          <div className="absolute top-3 left-3 text-white text-xs px-3 py-1 rounded-full bg-green-600">
-            {book.condition}
-          </div>
-        </div>
-      ) : (
-        <div className="w-full h-[200px] flex items-center justify-center bg-gradient-to-br from-warm-50 to-warm-100">
-          <span className="text-7xl">📚</span>
         </div>
       )}
 
       <div className="p-4 bg-white">
         <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-3xl font-bold text-accent">¥{book.price}</span>
+          <span className="text-3xl font-bold" style={{ color: '#E74C3C' }}>{book.price}元</span>
           {book.original_price && (
-            <span className="text-sm line-through text-gray-400">原价 ¥{book.original_price}</span>
+            <span className="text-sm line-through text-gray-400">原价 {book.original_price}元</span>
           )}
         </div>
         <h1 className="text-lg font-semibold text-primary">{book.title}</h1>
         <div className="flex gap-2 mt-3 flex-wrap">
-          <span className="tag tag-primary">{book.category}</span>
-          <span className="tag tag-success">{book.condition}</span>
-          {book.grade && <span className="tag tag-info">{book.grade}</span>}
-          {book.subject && <span className="tag tag-warning">{book.subject}</span>}
+          <span className="px-3 py-1 rounded-full text-xs font-medium border" style={{ borderColor: '#FF8C5A', color: '#FF8C5A', background: '#FFF8F0' }}>{book.category}</span>
+          <span className="px-3 py-1 rounded-full text-xs font-medium border" style={{ borderColor: '#10B981', color: '#10B981', background: '#ECFDF5' }}>{book.condition}</span>
         </div>
+
+        {book.isbn && isbnCount > 0 && (
+          <div className="mt-3 p-3 rounded-xl cursor-pointer" style={{ backgroundColor: '#FFF8F0', border: '1px solid #F5E6D0' }}>
+            <div className="flex items-center gap-2 text-sm" style={{ color: '#FF8C5A' }}>
+              <span>🔍</span>
+              <span className="font-medium">查看同ISBN商品比价（{isbnCount}件在售）</span>
+              <span className="ml-auto">›</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-2 p-4 bg-white">
-        <h2 className="font-semibold mb-3 text-primary">详细信息</h2>
-        <div className="space-y-2 text-sm">
-          {book.isbn && <div className="flex justify-between"><span className="text-gray-500">ISBN</span><span className="text-primary">{book.isbn}</span></div>}
-          {book.author && <div className="flex justify-between"><span className="text-gray-500">作者</span><span className="text-primary">{book.author}</span></div>}
-          {book.publisher && <div className="flex justify-between"><span className="text-gray-500">出版社</span><span className="text-primary">{book.publisher}</span></div>}
-          <div className="flex justify-between"><span className="text-gray-500">发布时间</span><span className="text-primary">{getTimeAgo(book.created_at)}</span></div>
+        <h2 className="font-bold mb-3 text-primary flex items-center gap-2">
+          <span className="w-1 h-4 rounded-full" style={{ backgroundColor: '#FF8C5A' }}></span>
+          详细信息
+        </h2>
+        <div className="space-y-3 text-sm">
+          {book.isbn && (
+            <div className="flex justify-between py-2" style={{ borderBottom: '1px solid #F3F4F6' }}>
+              <span className="text-gray-500">ISBN</span>
+              <span className="text-primary font-medium">{book.isbn}</span>
+            </div>
+          )}
+          {book.author && (
+            <div className="flex justify-between py-2" style={{ borderBottom: '1px solid #F3F4F6' }}>
+              <span className="text-gray-500">作者</span>
+              <span className="text-primary font-medium">{book.author}</span>
+            </div>
+          )}
+          {book.publisher && (
+            <div className="flex justify-between py-2" style={{ borderBottom: '1px solid #F3F4F6' }}>
+              <span className="text-gray-500">出版社</span>
+              <span className="text-primary font-medium">{book.publisher}</span>
+            </div>
+          )}
+          <div className="flex justify-between py-2">
+            <span className="text-gray-500">发布时间</span>
+            <span className="text-primary font-medium">{getTimeAgo(book.created_at)}</span>
+          </div>
         </div>
-        {book.description && (
-          <div className="mt-3 p-3 rounded-xl text-sm bg-gray-50 text-gray-600 whitespace-pre-wrap">{book.description}</div>
-        )}
       </div>
 
       {book.profiles && (
         <div className="mt-2 p-4 bg-white">
-          <h2 className="font-semibold mb-3 text-primary">卖家信息</h2>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden bg-gray-100">
-              {book.profiles.avatar_url ? (
-                <img src={book.profiles.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <span className="text-2xl">👤</span>
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="font-medium text-primary">{book.profiles.nickname || '匿名用户'}</div>
-              {book.profiles.school && <div className="text-xs text-gray-400">{book.profiles.school}</div>}
+          <h2 className="font-bold mb-3 text-primary flex items-center gap-2">
+            <span className="w-1 h-4 rounded-full" style={{ backgroundColor: '#FF8C5A' }}></span>
+            卖家信息
+          </h2>
+
+          <div className="p-3 rounded-xl mb-4" style={{ backgroundColor: '#F9FAFB' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden bg-gray-200">
+                {book.profiles.avatar_url ? (
+                  <img src={book.profiles.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <span className="text-2xl">👤</span>
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-primary">{book.profiles.nickname || '匿名用户'}</div>
+                {book.profiles.school && <div className="text-xs text-gray-400">{book.profiles.school}</div>}
+              </div>
+              <span style={{ color: '#D1D5DB' }}>›</span>
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <button onClick={handleCopyWechat} className="flex-1 py-2 rounded-xl text-sm font-medium bg-green-50 text-green-600 border border-green-200 active:scale-95 transition-transform touch-target">
-              复制微信号
-            </button>
-            <button onClick={handleCallPhone} className="flex-1 py-2 rounded-xl text-sm font-medium bg-blue-50 text-blue-600 border border-blue-200 active:scale-95 transition-transform touch-target">
-              拨打电话
-            </button>
-          </div>
+          {!isMine && (
+            <div className="flex gap-2 mb-4">
+              <button onClick={handleCopyWechat} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium" style={{ backgroundColor: '#FFF1F0', color: '#FF4D4F' }}>
+                <span>💬</span> 发消息
+              </button>
+              <button onClick={handleCopyWechat} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium" style={{ backgroundColor: '#F6FFED', color: '#52C41A' }}>
+                <span>👤</span> 复制微信号
+              </button>
+            </div>
+          )}
+
+          {!isMine && (
+            <div className="flex gap-2 mb-4">
+              <button onClick={handleCallPhone} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium" style={{ backgroundColor: '#E6F7FF', color: '#1890FF' }}>
+                <span>📞</span> 拨打电话
+              </button>
+              <button onClick={handleReport} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium" style={{ backgroundColor: '#FFF1F0', color: '#FF4D4F' }}>
+                <span>⚠️</span> 举报
+              </button>
+            </div>
+          )}
+
+          {wechat && (
+            <div className="p-3 rounded-xl mb-3" style={{ backgroundColor: '#F9FAFB' }}>
+              <div className="text-xs text-gray-400 mb-1">卖家微信号</div>
+              <div className="flex items-center justify-between">
+                <span className="text-primary font-medium">{wechat}</span>
+                <button onClick={handleCopyWechat} className="px-4 py-1.5 rounded-lg text-sm font-medium" style={{ backgroundColor: '#FF8C5A', color: '#fff' }}>复制</button>
+              </div>
+            </div>
+          )}
+
+          {phoneNum && (
+            <div className="p-3 rounded-xl" style={{ backgroundColor: '#F9FAFB' }}>
+              <div className="text-xs text-gray-400 mb-1">联系电话</div>
+              <div className="flex items-center justify-between">
+                <span className="text-primary font-medium">{phoneNum}</span>
+                <button onClick={handleCallPhone} className="px-4 py-1.5 rounded-lg text-sm font-medium" style={{ backgroundColor: '#FF8C5A', color: '#fff' }}>拨打</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      <div className="p-3 mx-4 mt-4 rounded-card bg-amber-50 border-l-4 border-amber-400">
+      <div className="p-3 mx-4 mt-4 rounded-card" style={{ backgroundColor: '#FFF8F0', borderLeft: '4px solid #FF8C5A' }}>
         <div className="flex items-start gap-2">
           <span className="text-xl">⚠️</span>
-          <p className="text-sm text-amber-700">本平台仅提供信息撮合服务，不涉及在线支付，请当面交易，谨防诈骗</p>
+          <p className="text-sm" style={{ color: '#D46B08' }}>本平台仅提供信息撮合服务，不涉及在线支付，请当面交易，谨防诈骗</p>
         </div>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 p-3 flex gap-3 z-50 bg-white border-t border-gray-100"
            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
-        <button onClick={toggleFavorite} className="flex flex-col items-center gap-1 px-4 py-2 touch-target active:scale-95 transition-transform"
-                style={{ color: isFavorite ? '#ffa06f' : '#666' }}>
-          <span className="text-xl">{isFavorite ? '⭐' : '☆'}</span>
-          <span className="text-xs">{isFavorite ? '已收藏' : '收藏'}</span>
-        </button>
         {isMine ? (
           <>
-            <button onClick={() => router.push(`/editItem?id=${book.id}`)} className="flex-1 py-3 rounded-xl text-white font-semibold bg-indigo-500 active:scale-95 transition-transform touch-target">
+            <button onClick={() => router.push(`/editItem?id=${book.id}`)} className="flex-1 py-3 rounded-xl text-white font-semibold active:scale-95 transition-transform touch-target" style={{ backgroundColor: '#FF8C5A' }}>
               编辑商品
             </button>
             <button onClick={() => setShowMore(!showMore)} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 active:scale-95 transition-transform touch-target">
@@ -297,9 +375,17 @@ export default function DetailContent() {
             </button>
           </>
         ) : (
-          <button onClick={() => { if (!user) { setShowAuthModal(true) } else { showToast('info', '功能开发中') } }} className="flex-1 py-3 rounded-xl text-white font-semibold bg-accent active:scale-95 transition-transform touch-target">
-            联系卖家
-          </button>
+          <>
+            <button onClick={toggleFavorite} className="flex flex-col items-center gap-1 px-4 py-2 touch-target active:scale-95 transition-transform"
+                    style={{ color: isFavorite ? '#FF8C5A' : '#666' }}>
+              <span className="text-xl">{isFavorite ? '⭐' : '☆'}</span>
+              <span className="text-xs">{isFavorite ? '已收藏' : '收藏'}</span>
+            </button>
+            <button onClick={handleShare} className="flex flex-col items-center gap-1 px-4 py-2 touch-target active:scale-95 transition-transform" style={{ color: '#666' }}>
+              <span className="text-xl">↗</span>
+              <span className="text-xs">分享</span>
+            </button>
+          </>
         )}
       </div>
 
