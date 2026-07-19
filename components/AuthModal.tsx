@@ -26,6 +26,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [isVisible, setIsVisible] = useState(false)
+  const [forgotStep, setForgotStep] = useState<'phone' | 'questions'>('phone')
+  const [dbQuestion1, setDbQuestion1] = useState('')
+  const [dbQuestion2, setDbQuestion2] = useState('')
+  const [selectedQuestion, setSelectedQuestion] = useState<1 | 2>(1)
+  const [verifyAnswer, setVerifyAnswer] = useState('')
 
   useEffect(() => {
     if (isOpen) {
@@ -54,6 +59,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setSecurityAnswer2('')
     setError('')
     setSuccess('')
+    setForgotStep('phone')
+    setDbQuestion1('')
+    setDbQuestion2('')
+    setSelectedQuestion(1)
+    setVerifyAnswer('')
   }
 
   const handleClose = () => {
@@ -108,7 +118,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         setTimeout(() => {
           onSuccess()
           handleClose()
-        }, 1000)
+          window.location.reload()
+        }, 500)
       } else {
         setError(data?.message || '登录失败')
       }
@@ -183,7 +194,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
         setTimeout(() => {
           onSuccess()
           handleClose()
-        }, 2000)
+          window.location.reload()
+        }, 1500)
       } else {
         setError(data?.message || '注册失败')
       }
@@ -194,7 +206,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     setLoading(false)
   }
 
-  const handleVerifyAnswer = async () => {
+  const handleForgotNext = async () => {
     if (!phone) {
       setError('请输入手机号')
       return
@@ -203,7 +215,39 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
       setError('请输入正确的11位手机号')
       return
     }
-    if (!securityAnswer1 || sanitizeInput(securityAnswer1).length < 1) {
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const { data, error: funcError } = await supabase.rpc('get_security_questions', {
+        p_phone: phone
+      })
+
+      if (funcError) {
+        setError('查询失败：' + funcError.message)
+        setLoading(false)
+        return
+      }
+
+      if (data && data.success) {
+        setDbQuestion1(data.question1 || '')
+        setDbQuestion2(data.question2 || '')
+        setForgotStep('questions')
+        setLoading(false)
+      } else {
+        setError(data?.message || '查询失败')
+        setLoading(false)
+      }
+    } catch (err) {
+      setError('网络错误，请检查网络后重试')
+      console.error('Fetch questions error:', err)
+      setLoading(false)
+    }
+  }
+
+  const handleVerifyAnswer = async () => {
+    if (!verifyAnswer || sanitizeInput(verifyAnswer).length < 1) {
       setError('请输入密保答案')
       return
     }
@@ -214,7 +258,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     try {
       const { data: data1, error: funcError } = await supabase.rpc('verify_security_answer', {
         p_phone: phone,
-        p_answer: sanitizeInput(securityAnswer1)
+        p_answer: sanitizeInput(verifyAnswer)
       })
 
       if (funcError) {
@@ -525,7 +569,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             </div>
           )}
 
-          {step === 'forgot' && (
+          {step === 'forgot' && forgotStep === 'phone' && (
             <div className="space-y-4 animate-fade-in">
               <p className="text-sm text-secondary">请输入注册时使用的手机号</p>
               <div>
@@ -541,14 +585,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 />
               </div>
               <button
-                onClick={() => {
-                  if (phone && validatePhone(phone)) setStep('verify')
-                  else setError('请输入正确的11位手机号')
-                }}
+                onClick={handleForgotNext}
                 disabled={loading}
                 className="btn-primary w-full ripple disabled:opacity-50"
               >
-                下一步
+                {loading ? '查询中...' : '下一步'}
               </button>
               <button
                 onClick={() => { if (!loading) { resetForm(); setStep('login') } }}
@@ -560,21 +601,49 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             </div>
           )}
 
-          {step === 'verify' && (
+          {step === 'forgot' && forgotStep === 'questions' && (
             <div className="space-y-4 animate-fade-in">
-              <p className="text-sm text-secondary">请回答您的密保问题</p>
+              <p className="text-sm text-secondary">请选择并回答您的密保问题</p>
+
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="questionSelect"
+                    checked={selectedQuestion === 1}
+                    onChange={() => setSelectedQuestion(1)}
+                    className="w-4 h-4 accent-[#FF8C5A]"
+                  />
+                  <span className="text-sm font-medium text-primary">{dbQuestion1 || '密保问题1'}</span>
+                </label>
+              </div>
+
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="questionSelect"
+                    checked={selectedQuestion === 2}
+                    onChange={() => setSelectedQuestion(2)}
+                    className="w-4 h-4 accent-[#FF8C5A]"
+                  />
+                  <span className="text-sm font-medium text-primary">{dbQuestion2 || '密保问题2'}</span>
+                </label>
+              </div>
+
               <div>
                 <label className="block text-sm mb-2 text-secondary font-medium">密保答案</label>
                 <input
                   type="text"
                   className="input"
-                  placeholder="请输入密保答案"
-                  value={securityAnswer1}
-                  onChange={(e) => setSecurityAnswer1(e.target.value)}
+                  placeholder="请输入答案"
+                  value={verifyAnswer}
+                  onChange={(e) => setVerifyAnswer(e.target.value)}
                   disabled={loading}
                   maxLength={100}
                 />
               </div>
+
               <button
                 onClick={handleVerifyAnswer}
                 disabled={loading}
@@ -583,7 +652,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
                 {loading ? '验证中...' : '验证'}
               </button>
               <button
-                onClick={() => { if (!loading) { resetForm(); setStep('forgot') } }}
+                onClick={() => { if (!loading) { setForgotStep('phone'); setVerifyAnswer(''); setError(''); } }}
                 disabled={loading}
                 className="w-full text-center text-sm text-tertiary active:scale-95 transition-transform disabled:opacity-50"
               >
