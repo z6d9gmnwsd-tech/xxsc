@@ -1,140 +1,132 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
-import BackButton from '@/components/BackButton'
-import BottomNav from '@/components/BottomNav'
-import { Flag, Send, Loader2, CheckCircle } from 'lucide-react'
+import { ChevronLeft, AlertTriangle, Send } from 'lucide-react'
+import { SkeletonCard } from '@/components/LoadingSpinner'
 
-export default function ReportPage() {
+const reportReasons = [
+  '虚假信息',
+  '违禁内容',
+  '盗版资料',
+  '诈骗信息',
+  '重复发布',
+  '其他',
+]
+
+function ReportContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = usePhoneAuth()
-  const bookId = searchParams.get('id')
+  const targetId = searchParams.get('id') || ''
+  const targetType = searchParams.get('type') || 'book'
   const [reason, setReason] = useState('')
   const [description, setDescription] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-
-  const reasons = [
-    '虚假商品',
-    '违禁物品',
-    '价格欺诈',
-    '冒充品牌',
-    '其他问题',
-  ]
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async () => {
-    if (!reason || !user || !bookId) return
-    setSubmitting(true)
-
-    await supabase.from('reports').insert({
-      book_id: bookId,
-      user_id: user.id,
+    if (!user) {
+      alert('请先登录')
+      router.push('/my')
+      return
+    }
+    if (!reason) {
+      alert('请选择举报原因')
+      return
+    }
+    setLoading(true)
+    const { error } = await supabase.from('reports').insert({
+      reporter_id: user.id,
+      target_id: targetId,
+      target_type: targetType,
       reason,
-      description,
+      description: description || undefined,
     })
-
-    setSubmitting(false)
-    setSubmitted(true)
-    setTimeout(() => router.back(), 2000)
+    setLoading(false)
+    if (error) {
+      alert('举报失败：' + error.message)
+    } else {
+      setSuccess(true)
+    }
   }
 
-  if (submitted) {
+  if (success) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen" style={{ background: '#F2F2F7' }}>
-        <CheckCircle size={64} color="#34C759" />
-        <h2 className="text-xl font-semibold mt-4" style={{ color: '#1a1a1a' }}>举报已提交</h2>
-        <p className="text-sm mt-2" style={{ color: '#666' }}>我们会尽快处理</p>
+      <div className="flex flex-col items-center justify-center min-h-screen px-8" style={{ background: '#F2F2F7' }}>
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, #5B8C5A, #40916C)' }}>
+          <AlertTriangle size={32} color="#fff" />
+        </div>
+        <h2 className="text-lg font-semibold mb-2" style={{ color: '#333' }}>举报已提交</h2>
+        <p className="text-sm text-center mb-6" style={{ color: '#999' }}>感谢您的反馈，我们会尽快处理</p>
+        <button onClick={() => router.back()} className="btn-primary">返回</button>
       </div>
     )
   }
 
   return (
-    <div className="pb-20" style={{ background: '#F2F2F7', minHeight: '100vh' }}>
-      <div
-        className="header-glass px-4 py-6 text-white"
-        style={{
-          background: 'linear-gradient(135deg, #F5E6D0 0%, #E0C9A8 40%, #C4A882 100%)',
-          backdropFilter: 'blur(20px)',
-        }}
-      >
+    <div className="pb-24 min-h-screen" style={{ background: '#F2F2F7' }}>
+      <div className="header-glass px-4 py-5 text-white">
         <div className="flex items-center gap-3">
-          <BackButton />
-          <div className="flex items-center gap-2">
-            <Flag size={20} />
-            <h1 className="text-xl font-bold">举报商品</h1>
-          </div>
+          <button onClick={() => router.back()} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
+            <ChevronLeft size={20} />
+          </button>
+          <AlertTriangle size={18} />
+          <h1 className="text-lg font-bold">举报</h1>
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        <div
-          className="rounded-2xl p-4"
-          style={{
-            background: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(10px)',
-            border: '0.5px solid rgba(0,0,0,0.04)',
-          }}
-        >
-          <label className="block text-sm font-medium mb-3" style={{ color: '#1a1a1a' }}>举报原因</label>
-          <div className="space-y-2">
-            {reasons.map((r) => (
-              <button
-                key={r}
-                onClick={() => setReason(r)}
-                className="w-full text-left px-4 py-3 rounded-xl text-sm transition-all"
-                style={{
-                  background: reason === r ? '#FFF0E6' : '#F2F2F7',
-                  color: reason === r ? '#E8590C' : '#666',
-                  border: `1px solid ${reason === r ? '#E8590C' : 'transparent'}`,
-                }}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+      <div className="mx-4 mt-4 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(10px)' }}>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: '#1a1a1a' }}>举报原因</h3>
+        <div className="flex flex-wrap gap-2">
+          {reportReasons.map((r) => (
+            <button
+              key={r}
+              onClick={() => setReason(r)}
+              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+              style={{
+                background: reason === r ? '#5B8C5A' : '#f0f2f5',
+                color: reason === r ? '#fff' : '#666',
+              }}
+            >
+              {r}
+            </button>
+          ))}
         </div>
+      </div>
 
-        <div
-          className="rounded-2xl p-4"
-          style={{
-            background: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(10px)',
-            border: '0.5px solid rgba(0,0,0,0.04)',
-          }}
-        >
-          <label className="block text-sm font-medium mb-2" style={{ color: '#1a1a1a' }}>详细描述（选填）</label>
-          <textarea
-            className="input min-h-[100px]"
-            placeholder="请描述具体问题..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
+      <div className="mx-4 mt-3 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(10px)' }}>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: '#1a1a1a' }}>详细描述（选填）</h3>
+        <textarea
+          className="input"
+          rows={4}
+          placeholder="请补充说明具体情况..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          style={{ resize: 'none' }}
+        />
+      </div>
 
+      <div className="mx-4 mt-4">
         <button
           onClick={handleSubmit}
-          disabled={!reason || submitting}
-          className="btn-primary w-full disabled:opacity-50 flex items-center justify-center gap-2"
+          disabled={loading || !reason}
+          className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {submitting ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              提交中...
-            </>
-          ) : (
-            <>
-              <Send size={16} />
-              提交举报
-            </>
-          )}
+          <Send size={16} />
+          {loading ? '提交中...' : '提交举报'}
         </button>
       </div>
-
-      <BottomNav activeTab="profile" />
     </div>
+  )
+}
+
+export default function ReportPage() {
+  return (
+    <Suspense fallback={<SkeletonCard />}>
+      <ReportContent />
+    </Suspense>
   )
 }
