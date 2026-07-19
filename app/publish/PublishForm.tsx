@@ -125,9 +125,7 @@ export default function PublishForm() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const handleSubmit = async () => {
     if (!user) {
       showToast('error', '请先登录')
       return
@@ -135,6 +133,11 @@ export default function PublishForm() {
 
     if (!title.trim()) {
       showToast('error', '请输入书名')
+      return
+    }
+
+    if (category === '教材' && !isbn.trim()) {
+      showToast('error', '教材类商品请填写ISBN')
       return
     }
 
@@ -201,7 +204,7 @@ export default function PublishForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 pb-20 space-y-4">
+    <div className="p-4 pb-20 space-y-4">
       {/* 商品类型 */}
       <div className="rounded-card p-4 bg-white">
         <h3 className="font-bold mb-3 text-primary">商品类型</h3>
@@ -286,8 +289,8 @@ export default function PublishForm() {
           {category === '教材' && (
             <>
               <div className="flex items-center gap-3">
-                <span className="w-16 text-sm text-primary flex-shrink-0">ISBN</span>
-                <input className="flex-1 input" placeholder="选填" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
+                <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> ISBN</span>
+                <input className="flex-1 input" placeholder="请输入ISBN码" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
               </div>
               <div className="flex items-center gap-3">
                 <span className="w-16 text-sm text-primary flex-shrink-0">作者</span>
@@ -430,12 +433,13 @@ export default function PublishForm() {
       </div>
 
       <button
-        type="submit"
+        type="button"
+        onClick={handleSubmit}
         disabled={loading || uploading}
-        className="btn-accent w-full mt-6 py-3 text-base disabled:opacity-50"
+        className="btn-primary w-full mt-6 py-3 text-base disabled:opacity-50"
       >
         {loading ? '发布中...' : uploading ? '图片上传中...' : '发布商品'}
       </button>
-    </form>
+    </div>
   )
 }
