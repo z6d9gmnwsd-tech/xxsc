@@ -33,7 +33,7 @@ const navItems = [
     href: '/publish',
     label: '卖书',
     highlight: true,
-    icon: () => (
+    icon: (_active: boolean) => (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path
           d="M12 5V19M5 12H19"
@@ -113,80 +113,70 @@ export default function BottomNav() {
         {navItems.map((item) => {
           const isActive = activeKey === item.key
           const isPressed = pressedKey === item.key
-
-          if (item.highlight) {
-            return (
-              <a
-                key={item.key}
-                href={item.href}
-                className="relative -mt-5 flex flex-col items-center"
-                onTouchStart={() => setPressedKey(item.key)}
-                onTouchEnd={() => setPressedKey(null)}
-                onMouseDown={() => setPressedKey(item.key)}
-                onMouseUp={() => setPressedKey(null)}
-                onMouseLeave={() => setPressedKey(null)}
-              >
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200"
-                  style={{
-                    background: 'linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%)',
-                    boxShadow: '0 4px 16px rgba(255, 140, 90, 0.35)',
-                    transform: isPressed ? 'scale(0.9)' : 'scale(1)',
-                    transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                  }}
-                >
-                  {item.icon(false)}
-                </div>
-                <span
-                  className="text-xs mt-1.5 font-medium"
-                  style={{
-                    color: isActive ? '#FF8C5A' : '#9CA3AF',
-                    fontSize: '0.625rem',
-                    transition: 'color 0.2s',
-                  }}
-                >
-                  {item.label}
-                </span>
-              </a>
-            )
-          }
+          const isHighlight = !!item.highlight
 
           return (
             <a
               key={item.key}
               href={item.href}
-              className="flex flex-col items-center py-2 px-4 relative"
+              className={`flex flex-col items-center relative ${isHighlight ? '-mt-5' : 'py-2 px-4'}`}
               onTouchStart={() => setPressedKey(item.key)}
               onTouchEnd={() => setPressedKey(null)}
               onMouseDown={() => setPressedKey(item.key)}
               onMouseUp={() => setPressedKey(null)}
               onMouseLeave={() => setPressedKey(null)}
             >
-              <div
-                className="w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200"
-                style={{
-                  backgroundColor: isActive ? 'rgba(255, 140, 90, 0.08)' : isPressed ? '#FBF6EE' : 'transparent',
-                  transform: isPressed ? 'scale(0.9)' : 'scale(1)',
-                  transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                }}
-              >
-                {item.icon(isActive)}
-              </div>
-              <span
-                className="text-xs mt-1 font-medium"
-                style={{
-                  color: isActive ? '#FF8C5A' : '#9CA3AF',
-                  fontSize: '0.625rem',
-                  transition: 'color 0.2s',
-                }}
-              >
-                {item.label}
-              </span>
-              {isActive && (
-                <div
-                  className="absolute -bottom-0.5 w-4 h-0.5 rounded-full"
-                  style={{ backgroundColor: '#FF8C5A' }}
-                />
+              {isHighlight ? (
+                <>
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-200"
+                    style={{
+                      background: 'linear-gradient(135deg, #FF8C5A 0%, #FF6B35 100%)',
+                      boxShadow: '0 4px 16px rgba(255, 140, 90, 0.35)',
+                      transform: isPressed ? 'scale(0.9)' : 'scale(1)',
+                      transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    }}
+                  >
+                    {item.icon(isActive)}
+                  </div>
+                  <span
+                    className="text-xs mt-1.5 font-medium"
+                    style={{
+                      color: isActive ? '#FF8C5A' : '#9CA3AF',
+                      fontSize: '0.625rem',
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div
+                    className="w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200"
+                    style={{
+                      backgroundColor: isActive ? 'rgba(255, 140, 90, 0.08)' : isPressed ? '#FBF6EE' : 'transparent',
+                      transform: isPressed ? 'scale(0.9)' : 'scale(1)',
+                      transitionTimingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    }}
+                  >
+                    {item.icon(isActive)}
+                  </div>
+                  <span
+                    className="text-xs mt-1 font-medium"
+                    style={{
+                      color: isActive ? '#FF8C5A' : '#9CA3AF',
+                      fontSize: '0.625rem',
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <div
+                      className="absolute -bottom-0.5 w-4 h-0.5 rounded-full"
+                      style={{ backgroundColor: '#FF8C5A' }}
+                    />
+                  )}
+                </>
               )}
             </a>
           )
