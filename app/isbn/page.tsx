@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react'
 import IsbnCompareContent from './IsbnContent'
+import BottomNav from '@/components/BottomNav'
 import { BarChart3, Loader2 } from 'lucide-react'
 
 function IsbnSkeleton() {
@@ -45,8 +46,11 @@ function IsbnSkeleton() {
 
 export default function IsbnPage() {
   return (
-    <Suspense fallback={<IsbnSkeleton />}>
-      <IsbnCompareContent />
-    </Suspense>
+    <div className="pb-20" style={{ background: '#F2F2F7', minHeight: '100vh' }}>
+      <Suspense fallback={<IsbnSkeleton />}>
+        <IsbnCompareContent />
+      </Suspense>
+      <BottomNav activeTab="home" />
+    </div>
   )
 }
