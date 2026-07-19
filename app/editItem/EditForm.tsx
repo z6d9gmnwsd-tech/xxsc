@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import BackButton from '@/components/BackButton'
-import { showToast } from '@/components/Toast'
+import Toast, { showToast } from '@/components/Toast'
 
 export default function EditForm() {
   const searchParams = useSearchParams()
@@ -67,7 +67,7 @@ export default function EditForm() {
       return
     }
     if (!isbn.trim()) {
-      showToast('error', '请填写ISBN')
+      showToast('error', '请填写ISBN码')
       return
     }
     if (!price || parseFloat(price) <= 0) {
@@ -76,35 +76,41 @@ export default function EditForm() {
     }
 
     setSaving(true)
-    const { error } = await supabase
-      .from('books')
-      .update({
-        title: title.trim(),
-        isbn: isbn.trim() || null,
-        author: author.trim() || null,
-        publisher: publisher.trim() || null,
-        price: parseFloat(price),
-        original_price: originalPrice ? parseFloat(originalPrice) : null,
-        condition,
-        description: description.trim() || null,
-      })
-      .eq('id', id)
+    try {
+      const { error } = await supabase
+        .from('books')
+        .update({
+          title: title.trim(),
+          isbn: isbn.trim() || null,
+          author: author.trim() || null,
+          publisher: publisher.trim() || null,
+          price: parseFloat(price),
+          original_price: originalPrice ? parseFloat(originalPrice) : null,
+          condition,
+          description: description.trim() || null,
+        })
+        .eq('id', id)
 
-    setSaving(false)
+      if (error) {
+        showToast('error', '保存失败：' + error.message)
+        setSaving(false)
+        return
+      }
 
-    if (error) {
-      showToast('error', '保存失败：' + error.message)
-      return
+      showToast('success', '修改成功')
+      setTimeout(() => router.push(`/detail?id=${id}`), 1500)
+    } catch (err) {
+      showToast('error', '保存失败，请重试')
+      console.error('Save error:', err)
     }
-
-    showToast('success', '修改成功')
-    setTimeout(() => router.push(`/detail?id=${id}`), 1500)
+    setSaving(false)
   }
 
   if (loading || loadingData) return <LoadingSpinner />
 
   return (
     <div className="pb-20">
+      <Toast />
       <div className="bg-gradient-primary px-4 py-6 text-white">
         <div className="flex items-center gap-3">
           <BackButton />
@@ -123,7 +129,7 @@ export default function EditForm() {
               <input className="flex-1 input" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="flex items-center gap-3">
-              <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> ISBN</span>
+              <span className="w-16 text-sm text-primary flex-shrink-0"><span className="text-red-500">*</span> ISBN码</span>
               <input className="flex-1 input" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
             </div>
             <div className="flex items-center gap-3">
@@ -163,9 +169,7 @@ export default function EditForm() {
                       color: condition === c ? '#fff' : '#333',
                       border: `1px solid ${condition === c ? '#F5E6D0' : '#e0e0e0'}`
                     }}
-                  >
-                    {c}
-                  </div>
+                  >{c}</div>
                 ))}
               </div>
             </div>
