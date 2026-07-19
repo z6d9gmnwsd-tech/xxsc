@@ -69,7 +69,7 @@ export default function WantPage() {
         </a>
       )}
 
-      <BottomNav activePage="my" />
+      <BottomNav activeTab="profile" />
     </div>
   )
 }
