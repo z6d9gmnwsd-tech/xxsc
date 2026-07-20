@@ -38,16 +38,14 @@ export default function DetailContent() {
       const { data, error } = await supabase.from('books').select('*').eq('id', bookId).single()
       if (error || !data) { setLoading(false); return }
       let profile = null
-      if (data.user_id) { const { data: p } = await supabase.from('profiles').select('nickname, avatar_url, school').eq('id', data.user_id).single(); profile = p }
-      setBook({ ...data, profiles: profile || { nickname: '匿名用户', avatar_url: null, school: null } })
+      if (data.user_id) { const { data: p } = await supabase.from('profiles').select('nickname, avatar_url, school, bio').eq('id', data.user_id).single(); profile = p }
+      setBook({ ...data, profiles: profile || { nickname: '匿名用户', avatar_url: null, school: null, bio: null } })
       if (data.isbn) { const { count } = await supabase.from('books').select('*', { count: 'exact', head: true }).eq('isbn', data.isbn).eq('status', '在售').neq('id', bookId); setIsbnCount(count || 0) }
     } catch (err) { console.error(err) }
     setLoading(false)
   }
 
-  const checkFavorite = async (bookId: string) => {
-    try { const { data } = await supabase.from('favorites').select('id').eq('user_id', user!.id).eq('book_id', bookId).single(); setIsFavorite(!!data) } catch {}
-  }
+  const checkFavorite = async (bookId: string) => { try { const { data } = await supabase.from('favorites').select('id').eq('user_id', user!.id).eq('book_id', bookId).single(); setIsFavorite(!!data) } catch {} }
 
   const toggleFavorite = async () => {
     if (!user) { setShowAuthModal(true); return }
@@ -64,13 +62,25 @@ export default function DetailContent() {
 
   const handleDelete = async () => {
     if (!book || !confirm('确定要删除这个商品吗？')) return
-    try { await supabase.from('books').delete().eq('id', book.id); showToast('success', '已删除'); setTimeout(() => router.push('/'), 1000) } catch { showToast('error', '删除失败') }
+    try { await supabase.from('books').delete().eq('id', book.id); showToast('success', '已删除'); setTimeout(() => router.back(), 1000) } catch { showToast('error', '删除失败') }
   }
 
   const handleRelist = async () => {
-    if (!book) return
-    if (!confirm('确定要上架这个商品吗？')) return
-    try { await supabase.from('books').update({ status: '在售' }).eq('id', book.id); setBook({ ...book!, status: '在售' }); setShowMore(false); showToast('success', '已上架') } catch { showToast('error', '操作失败') }
+    if (!book || !confirm('确定要上架这个商品吗？')) return
+    try {
+      await supabase.from('books').update({ status: '在售' }).eq('id', book.id)
+      showToast('success', '上架成功')
+      setTimeout(() => router.back(), 1000)
+    } catch { showToast('error', '操作失败') }
+  }
+
+  const handleTakeOffline = async () => {
+    if (!book || !confirm('确定要下架这个商品吗？')) return
+    try {
+      await supabase.from('books').update({ status: '已下架' }).eq('id', book.id)
+      showToast('success', '下架成功')
+      setTimeout(() => router.back(), 1000)
+    } catch { showToast('error', '操作失败') }
   }
 
   const getAllImages = () => { if (!book) return []; if (book.images && book.images.length > 0) return book.images.filter(i => i); return book.image_url ? [book.image_url] : [] }
@@ -130,12 +140,13 @@ export default function DetailContent() {
       {book.profiles && (
         <div className="mt-2 p-4 bg-white">
           <h2 className="font-bold mb-3 flex items-center gap-2" style={{ color: '#333' }}><span className="w-1 h-4 rounded-full" style={{ backgroundColor: '#F6C12C' }}></span>卖家信息</h2>
-          <div className="p-3 rounded-xl mb-4" style={{ backgroundColor: '#F8F6F2' }}>
+          <a href={`/seller?id=${book.user_id}`} className="block p-3 rounded-xl mb-4 active:scale-[0.98] transition-transform" style={{ backgroundColor: '#F8F6F2' }}>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: '#E5E5E5' }}>{book.profiles.avatar_url ? <img src={book.profiles.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" /> : <span className="text-2xl">👤</span>}</div>
               <div className="flex-1"><div className="font-medium" style={{ color: '#333' }}>{book.profiles.nickname || '匿名用户'}</div>{book.profiles.school && <div className="text-xs" style={{ color: '#999' }}>{book.profiles.school}</div>}</div>
+              <span style={{ color: '#D1D5DB' }}>›</span>
             </div>
-          </div>
+          </a>
           {!isMine && (<div className="flex gap-2 mb-4">
             <button onClick={handleCopyWechat} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium" style={{ backgroundColor: 'rgba(246,193,44,0.08)', color: '#D4A517' }}>💬 发消息</button>
             <button onClick={handleCopyWechat} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium" style={{ backgroundColor: 'rgba(16,185,129,0.08)', color: '#059669' }}>👤 复制微信号</button>
@@ -170,7 +181,7 @@ export default function DetailContent() {
       {showMore && isMine && (
         <div className="fixed bottom-20 left-0 right-0 p-4 z-50 bg-white animate-slide-up" style={{ borderTop: '1px solid #E5E5E5', paddingBottom: 'env(safe-area-inset-bottom,0px)' }}>
           {book.status === '已下架' && <button onClick={handleRelist} className="w-full py-3 text-center border-b active:scale-95 transition-transform touch-target" style={{ color: '#F6C12C', borderColor: '#E5E5E5' }}>上架商品</button>}
-          {book.status !== '已下架' && <button onClick={() => { if (book && confirm('确定要下架这个商品吗？')) { supabase.from('books').update({ status: '已下架' }).eq('id', book.id).then(() => { setBook({ ...book!, status: '已下架' }); setShowMore(false); showToast('success', '已下架') }) } }} className="w-full py-3 text-center border-b active:scale-95 transition-transform touch-target" style={{ color: '#D97706', borderColor: '#E5E5E5' }}>下架商品</button>}
+          {book.status !== '已下架' && <button onClick={handleTakeOffline} className="w-full py-3 text-center border-b active:scale-95 transition-transform touch-target" style={{ color: '#D97706', borderColor: '#E5E5E5' }}>下架商品</button>}
           <button onClick={handleDelete} className="w-full py-3 text-center border-b active:scale-95 transition-transform touch-target" style={{ color: '#DC2626', borderColor: '#E5E5E5' }}>删除商品</button>
           <button onClick={() => setShowMore(false)} className="w-full py-3 text-center active:scale-95 transition-transform touch-target" style={{ color: '#999' }}>取消</button>
         </div>
