@@ -33,7 +33,6 @@ export default function PublishForm() {
   const [examType, setExamType] = useState('')
   const [selectedExamSubjects, setSelectedExamSubjects] = useState<string[]>([])
 
-  // === 草稿 ===
   const DRAFT_KEY = 'publish-draft'
   const [showDraftModal, setShowDraftModal] = useState(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -75,7 +74,6 @@ export default function PublishForm() {
 
   const clearDraft = () => { localStorage.removeItem(DRAFT_KEY); setShowDraftModal(false) }
 
-  // === 常量 ===
   const grades = ['全年级通用', '大一', '大二', '大三', '大四', '研一', '研二', '研三']
   const majorCategories = ['全专业通用', '哲学', '经济学', '法学', '教育学', '文学', '历史学', '理学', '工学', '农学', '医学', '管理学', '艺术学', '军事学']
   const examTypes = ['考研', '考公考编', '其他']
@@ -84,45 +82,52 @@ export default function PublishForm() {
     '考公考编': { '笔试科目': ['行政职业能力测验', '申论', '公共基础知识', '综合应用能力', '职业能力倾向测验'], '考试类型': ['国家公务员考试', '省公务员考试', '事业单位考试', '教师资格考试', '银行/国企招聘', '军队文职'] }
   }
 
-  // === AI识别 ===
   const [recognizing, setRecognizing] = useState(false)
 
   const handleAIRecognize = async () => {
     if (images.length === 0) { showToast('error', '请先上传图片'); return }
     setRecognizing(true); showToast('info', '正在识别中，请稍候...')
     try {
-      const response = await fetch('https://api.ocr.space/parse/imageurl', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ url: images[currentImageIndex], apikey: 'K85289605588957', language: 'chs', isOverlayRequired: 'false' })
-      })
-      const result = await response.json()
-      if (result.ParsedResults && result.ParsedResults.length > 0) {
-        const text = result.ParsedResults[0].ParsedText || ''
-        const lines = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l)
-        let foundIsbn = '', foundTitle = '', foundAuthor = '', foundPublisher = ''
-        for (const line of lines) {
-          const isbnMatch = line.match(/(?:ISBN[:：]?\s*)?(\d{10,13})/)
-          if (isbnMatch && !foundIsbn) foundIsbn = isbnMatch[1]
-          if (!foundTitle && line.length >= 2 && line.length <= 60 && !line.match(/^\d/) && !line.match(/ISBN|定价|￥|出版社|作者/)) foundTitle = line
-          const authorMatch = line.match(/(?:著|编|作者|主编)[:：]?\s*(.+)/)
-          if (authorMatch && !foundAuthor) foundAuthor = authorMatch[1].trim()
-          const publisherMatch = line.match(/(出版社|出版)/)
-          if (publisherMatch && !foundPublisher) { const idx = lines.indexOf(line); if (idx > 0) foundPublisher = lines[idx - 1] || lines[idx].replace(/出版社|出版/g, '').trim() }
-        }
-        if (foundIsbn) setIsbn(foundIsbn)
-        if (foundTitle) setTitle(foundTitle)
-        if (foundAuthor) setAuthor(foundAuthor)
-        if (foundPublisher) setPublisher(foundPublisher)
-        const filled = [foundTitle && '书名', foundIsbn && 'ISBN', foundAuthor && '作者', foundPublisher && '出版社'].filter(Boolean)
-        if (filled.length > 0) { showToast('success', '已识别：' + filled.join('、')) }
-        else { showToast('error', '未能识别出有效信息，请确保图片清晰') }
-      } else { showToast('error', '识别失败，请确保图片清晰') }
-    } catch { showToast('error', '识别服务暂时不可用') }
-    setRecognizing(false)
+      const response = await fetch(images[currentImageIndex])
+      const blob = await response.blob()
+      const reader = new FileReader()
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(',')[1]
+          const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ base64Image: 'data:image/jpeg;base64,' + base64, apikey: 'K85289605588957', language: 'chs', isOverlayRequired: 'false', OCREngine: '2' })
+          })
+          const result = await ocrResponse.json()
+          if (result.ParsedResults && result.ParsedResults.length > 0) {
+            const text = result.ParsedResults[0].ParsedText || ''
+            const lines = text.split('\n').map((l: string) => l.trim()).filter((l: string) => l)
+            let foundIsbn = '', foundTitle = '', foundAuthor = '', foundPublisher = ''
+            for (const line of lines) {
+              const isbnMatch = line.match(/(\d{10}|\d{13})/)
+              if (isbnMatch && !foundIsbn) foundIsbn = isbnMatch[1]
+              if (!foundTitle && line.length >= 2 && line.length <= 50 && !line.match(/^\d/) && !line.match(/ISBN|定价|￥|出版社|作者|著|编|出版|印|版/)) foundTitle = line
+              const authorMatch = line.match(/(?:著|编|作者|主编|编著)[:：]?\s*(.+)/)
+              if (authorMatch && !foundAuthor) foundAuthor = authorMatch[1].trim()
+              const pubMatch = line.match(/(.+出版社)/)
+              if (pubMatch && !foundPublisher) foundPublisher = pubMatch[1].trim()
+            }
+            if (foundIsbn) setIsbn(foundIsbn)
+            if (foundTitle) setTitle(foundTitle)
+            if (foundAuthor) setAuthor(foundAuthor)
+            if (foundPublisher) setPublisher(foundPublisher)
+            const filled = [foundTitle && '书名', foundIsbn && 'ISBN', foundAuthor && '作者', foundPublisher && '出版社'].filter(Boolean)
+            if (filled.length > 0) showToast('success', '已识别：' + filled.join('、'))
+            else showToast('error', '未能识别出有效信息，请确保图片清晰')
+          } else { showToast('error', '识别失败，请确保图片清晰') }
+        } catch { showToast('error', '识别服务暂时不可用，请手动填写') }
+        setRecognizing(false)
+      }
+      reader.readAsDataURL(blob)
+    } catch { showToast('error', '图片读取失败'); setRecognizing(false) }
   }
 
-  // === 操作函数 ===
   const toggleGrade = (grade: string) => {
     if (grade === '全年级通用') { setSelectedGrades(['全年级通用']); return }
     let n = selectedGrades.filter(g => g !== '全年级通用')
@@ -139,7 +144,7 @@ export default function PublishForm() {
       if (file.size > 5 * 1024 * 1024) { showToast('error', '图片大小不能超过5MB'); setUploading(false); return }
       const ext = file.name.split('.').pop(); const fileName = `${user?.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
       const { data, error } = await supabase.storage.from('book-images').upload(fileName, file)
-      if (error) { showToast('error', '图片上传失败'); setUploading(false); return }
+      if (error) { showToast('error', '图片上传失败：' + error.message); setUploading(false); return }
       if (data) { const { data: url } = supabase.storage.from('book-images').getPublicUrl(fileName); if (url) setImages(prev => [...prev, url.publicUrl]) }
     }
     setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''
@@ -179,107 +184,43 @@ export default function PublishForm() {
   return (
     <div className="p-4 pb-20 space-y-4">
       <Toast />
-      {showDraftModal && (<div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
-        <div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-fade-in" style={{ boxShadow: '0 24px 48px rgba(0,0,0,0.12)' }}>
-          <h3 className="text-lg font-bold mb-2" style={{ color: '#333' }}>检测到未完成的发布</h3>
-          <p className="text-sm mb-6" style={{ color: '#666' }}>是否恢复上次填写的内容？</p>
-          <div className="flex gap-3"><button onClick={clearDraft} className="flex-1 py-3 rounded-xl font-medium active:scale-95 transition-transform" style={{ backgroundColor: '#F5F5F5', color: '#666' }}>不恢复</button><button onClick={restoreDraft} className="flex-1 py-3 rounded-xl text-white font-medium active:scale-95 transition-transform" style={{ backgroundColor: '#F6C12C' }}>恢复草稿</button></div>
-        </div>
-      </div>)}
+      {showDraftModal && (<div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}><div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-fade-in" style={{ boxShadow: '0 24px 48px rgba(0,0,0,0.12)' }}><h3 className="text-lg font-bold mb-2" style={{ color: '#333' }}>检测到未完成的发布</h3><p className="text-sm mb-6" style={{ color: '#666' }}>是否恢复上次填写的内容？</p><div className="flex gap-3"><button onClick={clearDraft} className="flex-1 py-3 rounded-xl font-medium active:scale-95 transition-transform" style={{ backgroundColor: '#F5F5F5', color: '#666' }}>不恢复</button><button onClick={restoreDraft} className="flex-1 py-3 rounded-xl text-white font-medium active:scale-95 transition-transform" style={{ backgroundColor: '#F6C12C' }}>恢复草稿</button></div></div></div>)}
 
-      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
-        <h3 className="font-bold mb-3" style={{ color: '#333' }}>商品类型</h3>
-        <div className="flex gap-4">
-          {[{ key: '教材', icon: '📚', label: '教材' }, { key: '备考资料', icon: '📝', label: '备考资料' }].map(item => (
-            <div key={item.key} onClick={() => { setCategory(item.key); setExamType(''); setSelectedExamSubjects([]); setIsbn('') }} className="flex-1 p-4 rounded-xl text-center cursor-pointer transition-all duration-200 active:scale-95" style={{ background: category === item.key ? 'rgba(246,193,44,0.08)' : '#F8F6F2', border: `2px solid ${category === item.key ? '#F6C12C' : '#E5E5E5'}` }}>
-              <div className="text-3xl mb-2">{item.icon}</div><div className="font-semibold" style={{ color: '#333' }}>{item.label}</div>
-            </div>
-          ))}
-        </div>
+      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}><h3 className="font-bold mb-3" style={{ color: '#333' }}>商品类型</h3><div className="flex gap-4">{[{ key: '教材', icon: '📚', label: '教材' }, { key: '备考资料', icon: '📝', label: '备考资料' }].map(item => (<div key={item.key} onClick={() => { setCategory(item.key); setExamType(''); setSelectedExamSubjects([]); setIsbn('') }} className="flex-1 p-4 rounded-xl text-center cursor-pointer transition-all duration-200 active:scale-95" style={{ background: category === item.key ? 'rgba(246,193,44,0.08)' : '#F8F6F2', border: `2px solid ${category === item.key ? '#F6C12C' : '#E5E5E5'}` }}><div className="text-3xl mb-2">{item.icon}</div><div className="font-semibold" style={{ color: '#333' }}>{item.label}</div></div>))}</div></div>
+
+      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}><h3 className="font-bold mb-3" style={{ color: '#333' }}>商品图片（{images.length}/5）</h3>
+        {images.length > 0 ? (<div><div className="relative mb-3"><div className="w-full h-64 rounded-xl overflow-hidden" style={{ backgroundColor: '#F5F5F5' }}><img src={images[currentImageIndex]} alt="" className="w-full h-full object-contain" /></div><button type="button" onClick={() => removeImage(currentImageIndex)} className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-white touch-target active:scale-95 transition-transform" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>✕</button><div className="absolute bottom-2 right-2 px-3 py-1 rounded-full text-xs text-white" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>{currentImageIndex + 1}/{images.length}</div></div><div className="flex gap-2 overflow-x-auto pb-2">{images.map((img, i) => (<div key={i} onClick={() => setCurrentImageIndex(i)} className="relative flex-shrink-0 cursor-pointer active:scale-95 transition-transform" style={{ border: i === currentImageIndex ? '3px solid #F6C12C' : '3px solid transparent', borderRadius: '8px' }}><img src={img} alt="" className="w-16 h-16 rounded-lg object-cover" /></div>))}{images.length < 5 && (<label className="flex-shrink-0 w-16 h-16 rounded-lg flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform" style={{ border: '2px dashed #E5E5E5', backgroundColor: '#F8F6F2' }}><span className="text-xl" style={{ color: '#ccc' }}>+</span><span className="text-xs" style={{ color: '#999' }}>添加</span><input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} /></label>)}</div>
+          {category === '教材' && images.length > 0 && (<div className="mt-2"><button onClick={handleAIRecognize} disabled={recognizing} className="w-full py-2.5 rounded-xl text-sm font-medium active:scale-95 transition-transform disabled:opacity-50" style={{ backgroundColor: 'rgba(246,193,44,0.1)', color: '#D4A517', border: '1px solid rgba(246,193,44,0.2)' }}>{recognizing ? '⏳ 识别中...' : '🤖 一键获取书本信息（请上传清晰的书本正面和背面图片）'}</button></div>)}</div>) : (<label className="w-full h-48 rounded-xl flex flex-col items-center justify-center cursor-pointer active:scale-[0.98] transition-transform" style={{ border: '2px dashed #E5E5E5', backgroundColor: '#F8F6F2' }}><span className="text-4xl" style={{ color: '#ccc' }}>{uploading ? '⏳' : '📷'}</span><span className="text-sm mt-2" style={{ color: '#999' }}>{uploading ? '上传中...' : '点击上传图片（最多5张）'}</span><input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} /></label>)}
       </div>
 
-      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
-        <h3 className="font-bold mb-3" style={{ color: '#333' }}>商品图片（{images.length}/5）</h3>
-        {images.length > 0 ? (<div>
-          <div className="relative mb-3"><div className="w-full h-64 rounded-xl overflow-hidden" style={{ backgroundColor: '#F5F5F5' }}><img src={images[currentImageIndex]} alt="" className="w-full h-full object-contain" /></div>
-            <button type="button" onClick={() => removeImage(currentImageIndex)} className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-white touch-target active:scale-95 transition-transform" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>✕</button>
-            <div className="absolute bottom-2 right-2 px-3 py-1 rounded-full text-xs text-white" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>{currentImageIndex + 1}/{images.length}</div></div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {images.map((img, i) => (<div key={i} onClick={() => setCurrentImageIndex(i)} className="relative flex-shrink-0 cursor-pointer active:scale-95 transition-transform" style={{ border: i === currentImageIndex ? '3px solid #F6C12C' : '3px solid transparent', borderRadius: '8px' }}><img src={img} alt="" className="w-16 h-16 rounded-lg object-cover" /></div>))}
-            {images.length < 5 && (<label className="flex-shrink-0 w-16 h-16 rounded-lg flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform" style={{ border: '2px dashed #E5E5E5', backgroundColor: '#F8F6F2' }}><span className="text-xl" style={{ color: '#ccc' }}>+</span><span className="text-xs" style={{ color: '#999' }}>添加</span><input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} /></label>)}
-          </div>
-          {category === '教材' && images.length > 0 && (<div className="mt-2"><button onClick={handleAIRecognize} disabled={recognizing} className="w-full py-2.5 rounded-xl text-sm font-medium active:scale-95 transition-transform disabled:opacity-50" style={{ backgroundColor: 'rgba(246,193,44,0.1)', color: '#D4A517', border: '1px solid rgba(246,193,44,0.2)' }}>{recognizing ? '⏳ 识别中...' : '🤖 一键获取书本信息（请上传清晰的书本正面和背面图片）'}</button></div>)}
-        </div>) : (<label className="w-full h-48 rounded-xl flex flex-col items-center justify-center cursor-pointer active:scale-[0.98] transition-transform" style={{ border: '2px dashed #E5E5E5', backgroundColor: '#F8F6F2' }}>
-          <span className="text-4xl" style={{ color: '#ccc' }}>{uploading ? '⏳' : '📷'}</span><span className="text-sm mt-2" style={{ color: '#999' }}>{uploading ? '上传中...' : '点击上传图片（最多5张）'}</span>
-          <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
-        </label>)}
-      </div>
+      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}><h3 className="font-bold mb-3" style={{ color: '#333' }}>商品介绍</h3><textarea className="input min-h-[80px] resize-none" placeholder="请输入商品介绍，例如：书本使用情况、是否有笔记等（选填，最多300字）" value={productIntro} onChange={e => setProductIntro(e.target.value)} maxLength={300} /><div className="text-right text-xs mt-1" style={{ color: '#999' }}>{productIntro.length}/300</div></div>
 
-      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
-        <h3 className="font-bold mb-3" style={{ color: '#333' }}>基本信息</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3"><span className="w-20 text-sm flex-shrink-0" style={{ color: '#333' }}><span className="text-red-500">*</span> 书名</span><input className="flex-1 input" placeholder="请输入书名或资料名称" value={title} onChange={e => setTitle(e.target.value)} /></div>
-          {category === '教材' && (<>
-            <div className="flex items-center gap-3"><span className="w-20 text-sm flex-shrink-0" style={{ color: '#333' }}><span className="text-red-500">*</span> ISBN码</span><input className="flex-1 input" placeholder="请输入ISBN码" value={isbn} onChange={e => setIsbn(e.target.value)} />
-              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanISBN} disabled={scanning} />
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={scanning} className="px-3 py-2 rounded-xl text-sm font-medium active:scale-95 transition-transform whitespace-nowrap" style={{ backgroundColor: 'rgba(59,130,246,0.08)', color: '#2563EB', border: '1px solid rgba(59,130,246,0.15)' }}>{scanning ? '识别中...' : '📷 扫描'}</button></div>
-            <div className="flex items-center gap-3"><span className="w-20 text-sm flex-shrink-0" style={{ color: '#333' }}>作者</span><input className="flex-1 input" placeholder="选填" value={author} onChange={e => setAuthor(e.target.value)} /></div>
-            <div className="flex items-center gap-3"><span className="w-20 text-sm flex-shrink-0" style={{ color: '#333' }}>出版社</span><input className="flex-1 input" placeholder="选填" value={publisher} onChange={e => setPublisher(e.target.value)} /></div>
-          </>)}
-        </div>
-      </div>
+      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}><h3 className="font-bold mb-3" style={{ color: '#333' }}>基本信息</h3><div className="space-y-3">
+        <div className="flex items-center gap-3"><span className="w-20 text-sm flex-shrink-0" style={{ color: '#333' }}><span className="text-red-500">*</span> 书名</span><input className="flex-1 input" placeholder="请输入书名或资料名称" value={title} onChange={e => setTitle(e.target.value)} /></div>
+        {category === '教材' && (<><div className="flex items-center gap-3"><span className="w-20 text-sm flex-shrink-0" style={{ color: '#333' }}><span className="text-red-500">*</span> ISBN码</span><input className="flex-1 input" placeholder="请输入ISBN码" value={isbn} onChange={e => setIsbn(e.target.value)} /><input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanISBN} disabled={scanning} /><button type="button" onClick={() => fileInputRef.current?.click()} disabled={scanning} className="px-3 py-2 rounded-xl text-sm font-medium active:scale-95 transition-transform whitespace-nowrap" style={{ backgroundColor: 'rgba(59,130,246,0.08)', color: '#2563EB', border: '1px solid rgba(59,130,246,0.15)' }}>{scanning ? '识别中...' : '📷 扫描'}</button></div>
+        <div className="flex items-center gap-3"><span className="w-20 text-sm flex-shrink-0" style={{ color: '#333' }}>作者</span><input className="flex-1 input" placeholder="选填" value={author} onChange={e => setAuthor(e.target.value)} /></div>
+        <div className="flex items-center gap-3"><span className="w-20 text-sm flex-shrink-0" style={{ color: '#333' }}>出版社</span><input className="flex-1 input" placeholder="选填" value={publisher} onChange={e => setPublisher(e.target.value)} /></div></>)}
+      </div></div>
 
-      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
-        <h3 className="font-bold mb-3" style={{ color: '#333' }}>商品介绍</h3>
-        <textarea className="input min-h-[80px] resize-none" placeholder="请输入商品介绍，例如：书本使用情况、是否有笔记等（选填，最多300字）" value={productIntro} onChange={e => setProductIntro(e.target.value)} maxLength={300} />
-        <div className="text-right text-xs mt-1" style={{ color: '#999' }}>{productIntro.length}/300</div>
-      </div>
+      {category === '教材' && (<div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}><h3 className="font-bold mb-3" style={{ color: '#333' }}>适用范围</h3><div className="mb-4"><div className="text-sm mb-2" style={{ color: '#666' }}>适用年级（可多选）</div><div className="flex flex-wrap gap-2">{grades.map(g => (<div key={g} onClick={() => toggleGrade(g)} className="px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: selectedGrades.includes(g) ? '#F6C12C' : '#F8F6F2', color: selectedGrades.includes(g) ? '#fff' : '#666', border: `1px solid ${selectedGrades.includes(g) ? '#F6C12C' : '#E5E5E5'}` }}>{g}</div>))}</div></div><div><div className="text-sm mb-2" style={{ color: '#666' }}>适用专业</div><div className="flex flex-wrap gap-2">{majorCategories.map(m => (<div key={m} onClick={() => setSelectedMajor(m)} className="px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: selectedMajor === m ? '#F6C12C' : '#F8F6F2', color: selectedMajor === m ? '#fff' : '#666', border: `1px solid ${selectedMajor === m ? '#F6C12C' : '#E5E5E5'}` }}>{m}</div>))}</div></div></div>)}
 
-      {category === '教材' && (<div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
-        <h3 className="font-bold mb-3" style={{ color: '#333' }}>适用范围</h3>
-        <div className="mb-4">
-          <div className="text-sm mb-2" style={{ color: '#666' }}>适用年级（可多选）</div>
-          <div className="flex flex-wrap gap-2">{grades.map(g => (<div key={g} onClick={() => toggleGrade(g)} className="px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: selectedGrades.includes(g) ? '#F6C12C' : '#F8F6F2', color: selectedGrades.includes(g) ? '#fff' : '#666', border: `1px solid ${selectedGrades.includes(g) ? '#F6C12C' : '#E5E5E5'}` }}>{g}</div>))}</div>
-        </div>
-        <div>
-          <div className="text-sm mb-2" style={{ color: '#666' }}>适用专业</div>
-          <div className="flex flex-wrap gap-2">{majorCategories.map(m => (<div key={m} onClick={() => setSelectedMajor(m)} className="px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: selectedMajor === m ? '#F6C12C' : '#F8F6F2', color: selectedMajor === m ? '#fff' : '#666', border: `1px solid ${selectedMajor === m ? '#F6C12C' : '#E5E5E5'}` }}>{m}</div>))}</div>
-        </div>
-      </div>)}
+      {category === '备考资料' && (<div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}><h3 className="font-bold mb-3" style={{ color: '#333' }}>备考范围</h3><div className="mb-4"><div className="text-sm mb-2" style={{ color: '#666' }}>考试类型</div><div className="flex flex-wrap gap-2">{examTypes.map(t => (<div key={t} onClick={() => { setExamType(t); setSelectedExamSubjects([]) }} className="px-4 py-2 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: examType === t ? '#F6C12C' : '#F8F6F2', color: examType === t ? '#fff' : '#333', border: `1px solid ${examType === t ? '#F6C12C' : '#E5E5E5'}` }}>{t}</div>))}</div></div>{examType && examSubjectsData[examType] && (<div className="max-h-80 overflow-y-auto">{Object.entries(examSubjectsData[examType]).map(([group, subjects]) => (<div key={group} className="mb-4"><div className="text-sm font-semibold mb-2" style={{ color: '#333' }}>{group}（可多选）</div><div className="flex flex-wrap gap-2">{subjects.map(s => (<div key={s} onClick={() => { setSelectedExamSubjects(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]) }} className="px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: selectedExamSubjects.includes(s) ? '#F6C12C' : '#F8F6F2', color: selectedExamSubjects.includes(s) ? '#fff' : '#666', border: `1px solid ${selectedExamSubjects.includes(s) ? '#F6C12C' : '#E5E5E5'}` }}>{s}</div>))}</div></div>))}</div>)}</div>)}
 
-      {category === '备考资料' && (<div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
-        <h3 className="font-bold mb-3" style={{ color: '#333' }}>备考范围</h3>
-        <div className="mb-4"><div className="text-sm mb-2" style={{ color: '#666' }}>考试类型</div>
-          <div className="flex flex-wrap gap-2">{examTypes.map(t => (<div key={t} onClick={() => { setExamType(t); setSelectedExamSubjects([]) }} className="px-4 py-2 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: examType === t ? '#F6C12C' : '#F8F6F2', color: examType === t ? '#fff' : '#333', border: `1px solid ${examType === t ? '#F6C12C' : '#E5E5E5'}` }}>{t}</div>))}</div></div>
-        {examType && examSubjectsData[examType] && (<div className="max-h-80 overflow-y-auto">{Object.entries(examSubjectsData[examType]).map(([group, subjects]) => (<div key={group} className="mb-4"><div className="text-sm font-semibold mb-2" style={{ color: '#333' }}>{group}（可多选）</div><div className="flex flex-wrap gap-2">{subjects.map(s => (<div key={s} onClick={() => { setSelectedExamSubjects(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]) }} className="px-3 py-1.5 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: selectedExamSubjects.includes(s) ? '#F6C12C' : '#F8F6F2', color: selectedExamSubjects.includes(s) ? '#fff' : '#666', border: `1px solid ${selectedExamSubjects.includes(s) ? '#F6C12C' : '#E5E5E5'}` }}>{s}</div>))}</div></div>))}</div>)}
-      </div>)}
+      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}><h3 className="font-bold mb-3" style={{ color: '#333' }}>价格与成色</h3><div className="space-y-3">
+        <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}><span className="text-red-500">*</span> 售价</span><input className="flex-1 input" type="number" step="0.01" min="0" placeholder="请输入售价" value={price} onChange={e => setPrice(e.target.value)} /><span className="text-sm" style={{ color: '#999' }}>元</span></div>
+        <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}>原价</span><input className="flex-1 input" type="number" step="0.01" min="0" placeholder="选填" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} /><span className="text-sm" style={{ color: '#999' }}>元</span></div>
+        <div><div className="text-sm mb-2" style={{ color: '#666' }}>成色</div><div className="flex flex-wrap gap-2">{['全新', '九成新', '八成新', '七成新', '六成新以下'].map(c => (<div key={c} onClick={() => setCondition(c)} className="px-4 py-2 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: condition === c ? '#F6C12C' : '#F8F6F2', color: condition === c ? '#fff' : '#333', border: `1px solid ${condition === c ? '#F6C12C' : '#E5E5E5'}` }}>{c}</div>))}</div></div>
+      </div></div>
 
-      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
-        <h3 className="font-bold mb-3" style={{ color: '#333' }}>价格与成色</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}><span className="text-red-500">*</span> 售价</span><input className="flex-1 input" type="number" step="0.01" min="0" placeholder="请输入售价" value={price} onChange={e => setPrice(e.target.value)} /><span className="text-sm" style={{ color: '#999' }}>元</span></div>
-          <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}>原价</span><input className="flex-1 input" type="number" step="0.01" min="0" placeholder="选填" value={originalPrice} onChange={e => setOriginalPrice(e.target.value)} /><span className="text-sm" style={{ color: '#999' }}>元</span></div>
-          <div><div className="text-sm mb-2" style={{ color: '#666' }}>成色</div>
-            <div className="flex flex-wrap gap-2">{['全新', '九成新', '八成新', '七成新', '六成新以下'].map(c => (<div key={c} onClick={() => setCondition(c)} className="px-4 py-2 rounded-full text-sm cursor-pointer transition-all duration-200 active:scale-95" style={{ background: condition === c ? '#F6C12C' : '#F8F6F2', color: condition === c ? '#fff' : '#333', border: `1px solid ${condition === c ? '#F6C12C' : '#E5E5E5'}` }}>{c}</div>))}</div></div>
-        </div>
-      </div>
+      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}><h3 className="font-bold mb-3" style={{ color: '#333' }}>联系方式</h3><div className="space-y-3">
+        <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}>微信号</span><input className="flex-1 input" placeholder="方便买家联系你" value={wechat} onChange={e => setWechat(e.target.value)} /></div>
+        <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}>联系电话</span><input className="flex-1 input" type="tel" placeholder="方便买家电话联系" value={phone} onChange={e => setPhone(e.target.value)} /></div>
+        <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}>备注</span><input className="flex-1 input" placeholder="补充说明" value={remark} onChange={e => setRemark(e.target.value)} /></div>
+      </div></div>
 
-      <div className="rounded-xl p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
-        <h3 className="font-bold mb-3" style={{ color: '#333' }}>联系方式</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}>微信号</span><input className="flex-1 input" placeholder="方便买家联系你" value={wechat} onChange={e => setWechat(e.target.value)} /></div>
-          <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}>联系电话</span><input className="flex-1 input" type="tel" placeholder="方便买家电话联系" value={phone} onChange={e => setPhone(e.target.value)} /></div>
-          <div className="flex items-center gap-3"><span className="w-16 text-sm flex-shrink-0" style={{ color: '#333' }}>备注</span><input className="flex-1 input" placeholder="补充说明" value={remark} onChange={e => setRemark(e.target.value)} /></div>
-        </div>
-      </div>
+      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(246,193,44,0.06)', borderLeft: '3px solid #F6C12C' }}><div className="flex items-start gap-2"><span className="text-lg">⚠️</span><p className="text-sm" style={{ color: '#92400E' }}>本平台仅提供信息撮合服务，不涉及在线支付，请当面交易，谨防诈骗</p></div></div>
 
-      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(246,193,44,0.06)', borderLeft: '3px solid #F6C12C' }}>
-        <div className="flex items-start gap-2"><span className="text-lg">⚠️</span><p className="text-sm" style={{ color: '#92400E' }}>本平台仅提供信息撮合服务，不涉及在线支付，请当面交易，谨防诈骗</p></div>
-      </div>
-
-      <button type="button" onClick={handleSubmit} disabled={loading || uploading || recognizing} className="w-full py-3 rounded-xl text-white font-semibold active:scale-95 transition-transform disabled:opacity-50" style={{ backgroundColor: '#F6C12C' }}>
-        {loading ? '发布中...' : uploading ? '图片上传中...' : recognizing ? '识别中...' : '发布商品'}
-      </button>
+      <button type="button" onClick={handleSubmit} disabled={loading || uploading || recognizing} className="w-full py-3 rounded-xl text-white font-semibold active:scale-95 transition-transform disabled:opacity-50" style={{ backgroundColor: '#F6C12C' }}>{loading ? '发布中...' : uploading ? '图片上传中...' : recognizing ? '识别中...' : '发布商品'}</button>
     </div>
   )
 }
