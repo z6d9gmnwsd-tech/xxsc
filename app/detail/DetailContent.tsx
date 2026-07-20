@@ -67,20 +67,12 @@ export default function DetailContent() {
 
   const handleRelist = async () => {
     if (!book || !confirm('确定要上架这个商品吗？')) return
-    try {
-      await supabase.from('books').update({ status: '在售' }).eq('id', book.id)
-      showToast('success', '上架成功')
-      setTimeout(() => router.back(), 1000)
-    } catch { showToast('error', '操作失败') }
+    try { await supabase.from('books').update({ status: '在售' }).eq('id', book.id); showToast('success', '上架成功'); setTimeout(() => router.back(), 1000) } catch { showToast('error', '操作失败') }
   }
 
   const handleTakeOffline = async () => {
     if (!book || !confirm('确定要下架这个商品吗？')) return
-    try {
-      await supabase.from('books').update({ status: '已下架' }).eq('id', book.id)
-      showToast('success', '下架成功')
-      setTimeout(() => router.back(), 1000)
-    } catch { showToast('error', '操作失败') }
+    try { await supabase.from('books').update({ status: '已下架' }).eq('id', book.id); showToast('success', '下架成功'); setTimeout(() => router.back(), 1000) } catch { showToast('error', '操作失败') }
   }
 
   const getAllImages = () => { if (!book) return []; if (book.images && book.images.length > 0) return book.images.filter(i => i); return book.image_url ? [book.image_url] : [] }
@@ -127,7 +119,14 @@ export default function DetailContent() {
         )}
       </div>
 
-      <div className="mt-2 p-4 bg-white">
+      {book.product_intro && (
+        <div className="mt-2 p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
+          <h2 className="font-bold mb-3 flex items-center gap-2" style={{ color: '#333' }}><span className="w-1 h-4 rounded-full" style={{ backgroundColor: '#F6C12C' }}></span>商品介绍</h2>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#666' }}>{book.product_intro}</p>
+        </div>
+      )}
+
+      <div className="mt-2 p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
         <h2 className="font-bold mb-3 flex items-center gap-2" style={{ color: '#333' }}><span className="w-1 h-4 rounded-full" style={{ backgroundColor: '#F6C12C' }}></span>详细信息</h2>
         <div className="space-y-3 text-sm">
           {book.isbn && <div className="flex justify-between py-2" style={{ borderBottom: '1px solid #E5E5E5' }}><span style={{ color: '#666' }}>ISBN</span><span className="font-medium" style={{ color: '#333' }}>{book.isbn}</span></div>}
@@ -138,7 +137,7 @@ export default function DetailContent() {
       </div>
 
       {book.profiles && (
-        <div className="mt-2 p-4 bg-white">
+        <div className="mt-2 p-4 bg-white" style={{ border: '1px solid #E5E5E5' }}>
           <h2 className="font-bold mb-3 flex items-center gap-2" style={{ color: '#333' }}><span className="w-1 h-4 rounded-full" style={{ backgroundColor: '#F6C12C' }}></span>卖家信息</h2>
           <a href={`/seller?id=${book.user_id}`} className="block p-3 rounded-xl mb-4 active:scale-[0.98] transition-transform" style={{ backgroundColor: '#F8F6F2' }}>
             <div className="flex items-center gap-3">
