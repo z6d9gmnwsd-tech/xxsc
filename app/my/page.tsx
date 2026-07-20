@@ -1,24 +1,27 @@
 'use client'
 import { usePhoneAuth } from '@/hooks/usePhoneAuth'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import BottomNav from '@/components/BottomNav'
 import AuthModal from '@/components/AuthModal'
 import Toast, { showToast } from '@/components/Toast'
-import { useState } from 'react'
 
 export default function MyPage() {
   const { user, loading, logout } = usePhoneAuth()
-  const router = useRouter()
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [feedbackContent, setFeedbackContent] = useState('')
   const [feedbackPhone, setFeedbackPhone] = useState('')
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
+  const [profile, setProfile] = useState<{ school: string | null; bio: string | null } | null>(null)
 
-  const handleLogout = () => {
-    if (confirm('确定要退出登录吗？')) { logout(); window.location.reload() }
-  }
+  useEffect(() => {
+    if (user) {
+      supabase.from('profiles').select('school, bio').eq('id', user.id).single().then(({ data }) => { if (data) setProfile(data) })
+    }
+  }, [user])
+
+  const handleLogout = () => { if (confirm('确定要退出登录吗？')) { logout(); window.location.reload() } }
 
   const handleSubmitFeedback = async () => {
     if (!feedbackContent.trim() || feedbackContent.trim().length < 5) { showToast('error', '请详细描述您的意见（至少5个字符）'); return }
@@ -26,8 +29,7 @@ export default function MyPage() {
     try {
       const { error } = await supabase.from('feedbacks').insert({ user_id: user?.id || null, phone: feedbackPhone || null, content: feedbackContent.trim() })
       if (error) { showToast('error', '提交失败'); setFeedbackSubmitting(false); return }
-      showToast('success', '感谢您的反馈！我们会认真处理')
-      setFeedbackContent(''); setFeedbackPhone(''); setShowFeedbackModal(false)
+      showToast('success', '感谢您的反馈！'); setFeedbackContent(''); setFeedbackPhone(''); setShowFeedbackModal(false)
     } catch { showToast('error', '网络错误') }
     setFeedbackSubmitting(false)
   }
@@ -43,9 +45,8 @@ export default function MyPage() {
   ]
 
   return (
-    <div className="pb-24 min-h-screen" style={{ backgroundColor: 'var(--bg-page)' }}>
+    <div className="pb-24 min-h-screen" style={{ backgroundColor: '#F8F6F2' }}>
       <Toast />
-
       <div className="relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #F0DEBF 0%, #E8D0A8 40%, #D4B88A 100%)' }} />
         <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%)' }} />
@@ -56,37 +57,41 @@ export default function MyPage() {
                 : <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="#666" strokeWidth="2"/><path d="M5 20C5 17.2386 8.13401 15 12 15C15.866 15 19 17.2386 19 20" stroke="#666" strokeWidth="2" strokeLinecap="round"/></svg>}
             </div>
             <div className="flex-1">
-              {loading ? (<div className="space-y-2"><div className="h-5 w-24 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /><div className="h-4 w-32 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} /></div>)
-                : user ? (<><div className="text-xl font-bold" style={{ color: '#333' }}>{user.nickname}</div><div className="text-sm mt-0.5" style={{ color: '#666' }}>{user.phone}</div></>)
+              {loading ? <div className="space-y-2"><div className="h-5 w-24 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }} /><div className="h-4 w-32 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} /></div>
+                : user ? (<>
+                  <div className="text-xl font-bold" style={{ color: '#333' }}>{user.nickname}</div>
+                  <div className="text-sm" style={{ color: '#666' }}>{user.phone}</div>
+                  {profile?.school && <div className="text-xs mt-0.5" style={{ color: '#8B7355' }}>🏫 {profile.school}</div>}
+                  {profile?.bio && <div className="text-xs mt-0.5 truncate max-w-[200px]" style={{ color: '#8B7355' }}>📝 {profile.bio}</div>}
+                </>)
                 : (<><button onClick={() => setShowAuthModal(true)} className="text-xl font-bold active:scale-95 transition-transform" style={{ color: '#333' }}>登录 / 注册</button><div className="text-sm mt-0.5" style={{ color: '#666' }}>登录后查看更多功能</div></>)}
             </div>
-            {user && <button onClick={handleLogout} className="text-sm px-4 py-2 rounded-full active:scale-95 transition-all duration-200" style={{ background: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(4px)', color: '#666' }}>退出</button>}
+            {user && <button onClick={handleLogout} className="text-sm px-4 py-2 rounded-full active:scale-95 transition-all" style={{ background: 'rgba(255,255,255,0.3)', backdropFilter: 'blur(4px)', color: '#666' }}>退出</button>}
           </div>
         </div>
       </div>
 
       {user ? (
         <div className="px-4 -mt-6 relative z-10 space-y-3">
-          <div className="card overflow-hidden">
+          <div className="rounded-xl overflow-hidden bg-white" style={{ border: '1px solid #E5E5E5' }}>
             {menuItems.map((item, index) => (
-              <a key={item.label} href={item.href} className="flex items-center justify-between px-4 py-4 active:scale-[0.98] transition-all duration-200" style={{ borderBottom: index < menuItems.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-                <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--bg-page)' }}>{item.icon}</div><span className="font-medium" style={{ color: '#333' }}>{item.label}</span></div>
+              <a key={item.label} href={item.href} className="flex items-center justify-between px-4 py-4 active:scale-[0.98] transition-all" style={{ borderBottom: index < menuItems.length - 1 ? '1px solid #E5E5E5' : 'none' }}>
+                <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F8F6F2' }}>{item.icon}</div><span className="font-medium" style={{ color: '#333' }}>{item.label}</span></div>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: '#D1D5DB' }}><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </a>
             ))}
           </div>
-
-          <div className="card overflow-hidden">
+          <div className="rounded-xl overflow-hidden bg-white" style={{ border: '1px solid #E5E5E5' }}>
             {settingItems.map((item, index) => (
               <div key={item.label}>
                 {item.href ? (
-                  <a href={item.href} className="flex items-center justify-between px-4 py-4 active:scale-[0.98] transition-all duration-200" style={{ borderBottom: index < settingItems.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-                    <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--bg-page)' }}>{item.icon}</div><span className="font-medium" style={{ color: '#333' }}>{item.label}</span></div>
+                  <a href={item.href} className="flex items-center justify-between px-4 py-4 active:scale-[0.98] transition-all" style={{ borderBottom: index < settingItems.length - 1 ? '1px solid #E5E5E5' : 'none' }}>
+                    <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F8F6F2' }}>{item.icon}</div><span className="font-medium" style={{ color: '#333' }}>{item.label}</span></div>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: '#D1D5DB' }}><path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </a>
                 ) : (
-                  <div onClick={() => { if (item.badge === '意见反馈') setShowFeedbackModal(true) }} className="flex items-center justify-between px-4 py-4 active:scale-[0.98] transition-all duration-200 cursor-pointer" style={{ borderBottom: index < settingItems.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-                    <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--bg-page)' }}>{item.icon}</div><span className="font-medium" style={{ color: '#333' }}>{item.label}</span></div>
+                  <div onClick={() => { if (item.badge === '意见反馈') setShowFeedbackModal(true) }} className="flex items-center justify-between px-4 py-4 active:scale-[0.98] transition-all cursor-pointer" style={{ borderBottom: index < settingItems.length - 1 ? '1px solid #E5E5E5' : 'none' }}>
+                    <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F8F6F2' }}>{item.icon}</div><span className="font-medium" style={{ color: '#333' }}>{item.label}</span></div>
                     <span className="text-sm" style={{ color: '#999' }}>{item.badge}</span>
                   </div>
                 )}
@@ -109,18 +114,12 @@ export default function MyPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-fade-in" style={{ boxShadow: '0 24px 48px rgba(0,0,0,0.12)' }}>
             <h3 className="text-lg font-bold mb-4" style={{ color: '#333' }}>联系客服 · 意见反馈</h3>
             <div className="space-y-3">
-              <div>
-                <label className="block text-sm mb-1 font-medium" style={{ color: '#666' }}>您的联系方式（选填）</label>
-                <input type="text" className="input" placeholder="手机号或微信号，方便回复" value={feedbackPhone} onChange={e => setFeedbackPhone(e.target.value)} maxLength={50} />
-              </div>
-              <div>
-                <label className="block text-sm mb-1 font-medium" style={{ color: '#666' }}>您的意见或建议 *</label>
-                <textarea className="input min-h-[100px] resize-none" placeholder="请详细描述您遇到的问题或建议..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} maxLength={1000} />
-              </div>
+              <div><label className="block text-sm mb-1 font-medium" style={{ color: '#666' }}>您的联系方式（选填）</label><input type="text" className="input" placeholder="手机号或微信号" value={feedbackPhone} onChange={e => setFeedbackPhone(e.target.value)} maxLength={50} /></div>
+              <div><label className="block text-sm mb-1 font-medium" style={{ color: '#666' }}>您的意见或建议 *</label><textarea className="input min-h-[100px] resize-none" placeholder="请详细描述..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} maxLength={1000} /></div>
             </div>
             <div className="flex gap-3 mt-4">
-              <button onClick={() => { setShowFeedbackModal(false); setFeedbackContent(''); setFeedbackPhone('') }} className="flex-1 py-3 rounded-lg font-medium active:scale-95 transition-transform" style={{ backgroundColor: 'var(--bg-input)', color: '#666' }}>取消</button>
-              <button onClick={handleSubmitFeedback} disabled={feedbackSubmitting} className="flex-1 py-3 rounded-lg text-white font-medium active:scale-95 transition-transform disabled:opacity-50" style={{ backgroundColor: '#F6C12C' }}>{feedbackSubmitting ? '提交中...' : '提交'}</button>
+              <button onClick={() => { setShowFeedbackModal(false); setFeedbackContent(''); setFeedbackPhone('') }} className="flex-1 py-3 rounded-xl font-medium active:scale-95 transition-transform" style={{ backgroundColor: '#F5F5F5', color: '#666' }}>取消</button>
+              <button onClick={handleSubmitFeedback} disabled={feedbackSubmitting} className="flex-1 py-3 rounded-xl text-white font-medium active:scale-95 transition-transform disabled:opacity-50" style={{ backgroundColor: '#F6C12C' }}>{feedbackSubmitting ? '提交中...' : '提交'}</button>
             </div>
           </div>
         </div>
