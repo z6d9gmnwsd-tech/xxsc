@@ -11,6 +11,7 @@ export interface Book {
   id: string
   title: string
   description: string | null
+  product_intro: string | null
   original_price: number | null
   price: number
   condition: string
@@ -24,6 +25,8 @@ export interface Book {
   publisher: string | null
   user_id: string
   status: string
+  exam_type: string | null
+  exam_subjects: string | null
   created_at: string
   updated_at: string
 }
@@ -33,6 +36,7 @@ export interface BookWithProfile extends Book {
     nickname: string
     avatar_url: string | null
     school: string | null
+    bio: string | null
   }
 }
 
