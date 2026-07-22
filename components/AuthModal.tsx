@@ -1,5 +1,4 @@
 'use client'
-
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -27,6 +26,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [success, setSuccess] = useState('')
   const [isVisible, setIsVisible] = useState(false)
 
+  // 密保验证相关
+  const [verifyQuestion, setVerifyQuestion] = useState('')
+  const [verifyAnswer, setVerifyAnswer] = useState('')
+
   const [appealPhone, setAppealPhone] = useState('')
   const [appealEvidence, setAppealEvidence] = useState('')
   const [appealCodeWord, setAppealCodeWord] = useState('')
@@ -34,17 +37,27 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   const [appealUploading, setAppealUploading] = useState(false)
   const appealFileRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { if (isOpen) { requestAnimationFrame(() => setIsVisible(true)) } else { setIsVisible(false) } }, [isOpen])
+  useEffect(() => {
+    if (isOpen) { requestAnimationFrame(() => setIsVisible(true)) }
+    else { setIsVisible(false) }
+  }, [isOpen])
 
   const fixedQuestions = ['你的学号是多少？', '你的学校名称是什么？', '你的专业是什么？', '你最喜欢的课程是什么？']
 
   const resetForm = () => {
-    setPhone(''); setPassword(''); setConfirmPassword(''); setSecurityQuestion1(''); setCustomQuestion1('')
-    setSecurityAnswer1(''); setSecurityQuestion2(''); setCustomQuestion2(''); setSecurityAnswer2('')
-    setError(''); setSuccess(''); setAppealPhone(''); setAppealEvidence(''); setAppealCodeWord(''); setAppealImages([])
+    setPhone(''); setPassword(''); setConfirmPassword('')
+    setSecurityQuestion1(''); setCustomQuestion1(''); setSecurityAnswer1('')
+    setSecurityQuestion2(''); setCustomQuestion2(''); setSecurityAnswer2('')
+    setError(''); setSuccess('')
+    setVerifyQuestion(''); setVerifyAnswer('')
+    setAppealPhone(''); setAppealEvidence(''); setAppealCodeWord(''); setAppealImages([])
   }
 
-  const handleClose = () => { setIsVisible(false); setTimeout(() => { resetForm(); setStep('login'); onClose() }, 300) }
+  const handleClose = () => {
+    setIsVisible(false)
+    setTimeout(() => { resetForm(); setStep('login'); onClose() }, 300)
+  }
+
   const validatePhone = (p: string) => /^1[3-9]\d{9}$/.test(p)
   const sanitizeInput = (input: string) => input.replace(/[<>]/g, '').trim()
 
@@ -109,10 +122,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
   const handleVerifyAnswer = async () => {
     if (!phone || !validatePhone(phone)) { setError('请输入正确的11位手机号'); return }
-    if (!securityAnswer1 || sanitizeInput(securityAnswer1).length < 1) { setError('请输入密保答案'); return }
+    if (!verifyAnswer || sanitizeInput(verifyAnswer).length < 1) { setError('请输入密保答案'); return }
     setLoading(true); setError('')
     try {
-      const { data, error: funcError } = await supabase.rpc('verify_security_answer', { p_phone: phone, p_answer: sanitizeInput(securityAnswer1) })
+      const { data, error: funcError } = await supabase.rpc('verify_security_answer', { p_phone: phone, p_answer: sanitizeInput(verifyAnswer) })
       if (funcError) { setError('验证失败：' + funcError.message); setLoading(false); return }
       if (data?.success) { setLoading(false); setStep('reset'); return }
       setLoading(false); setError(data?.message || '密保答案错误')
@@ -149,7 +162,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
   }
 
   if (!isOpen) return null
-  const titleMap: Record<Step, string> = { login: '登录', register: '注册', forgot: '忘记密码', verify: '验证密保', reset: '重置密码', appeal: '手机号申诉' }
+
+  const titleMap: Record<Step, string> = {
+    login: '登录', register: '注册', forgot: '忘记密码',
+    verify: '验证密保', reset: '重置密码', appeal: '手机号申诉'
+  }
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} onClick={handleClose}>
@@ -165,92 +182,132 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             </button>
           </div>
         </div>
+
         <div className="p-6 max-h-[60vh] overflow-y-auto scroll-container">
           {error && <div className="mb-4 p-3 rounded-lg text-center text-sm" style={{ backgroundColor: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>{error}</div>}
           {success && <div className="mb-4 p-3 rounded-lg text-center text-sm" style={{ backgroundColor: 'rgba(16,185,129,0.08)', color: '#059669' }}>{success}</div>}
 
-          {step === 'login' && (<div className="space-y-4 animate-fade-in">
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>手机号</label><input type="tel" className="input" placeholder="请输入11位手机号" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} disabled={loading} maxLength={11} /></div>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>密码</label><input type="password" className="input" placeholder="请输入密码" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
-            <button onClick={handleLogin} disabled={loading} className="btn-primary w-full disabled:opacity-50">{loading ? '登录中...' : '登录'}</button>
-            <div className="flex justify-between text-sm">
-              <button onClick={() => { if (!loading) { resetForm(); setStep('register') } }} disabled={loading} style={{ color: '#D4A517' }} className="font-medium active:scale-95 transition-transform">注册账号</button>
-              <button onClick={() => { if (!loading) { resetForm(); setStep('forgot') } }} disabled={loading} className="active:scale-95 transition-transform" style={{ color: '#999' }}>忘记密码？</button>
-            </div>
-            <div className="text-center"><button onClick={() => { if (!loading) { resetForm(); setStep('appeal') } }} disabled={loading} className="text-xs active:scale-95 transition-transform" style={{ color: '#D4A517' }}>手机号被占用？进行申诉</button></div>
-          </div>)}
-
-          {step === 'register' && (<div className="space-y-4 animate-fade-in">
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>手机号 *</label><input type="tel" className="input" placeholder="请输入11位手机号" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} disabled={loading} maxLength={11} /></div>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>设置密码 *</label><input type="password" className="input" placeholder="请输入密码（至少6位）" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>确认密码 *</label><input type="password" className="input" placeholder="请再次输入密码" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>密保问题1 *</label>
-              <select className="input mb-2" value={securityQuestion1} onChange={e => { setSecurityQuestion1(e.target.value); setCustomQuestion1('') }} disabled={loading}><option value="">选择或自定义问题</option>{fixedQuestions.map(q => <option key={q} value={q}>{q}</option>)}<option value="custom">自定义问题</option></select>
-              {(securityQuestion1 === 'custom' || !fixedQuestions.includes(securityQuestion1)) && <input type="text" className="input mb-2" placeholder="请输入自定义问题" value={customQuestion1} onChange={e => setCustomQuestion1(e.target.value)} disabled={loading} maxLength={100} />}
-              <input type="text" className="input" placeholder="请输入密保答案" value={securityAnswer1} onChange={e => setSecurityAnswer1(e.target.value)} disabled={loading} maxLength={100} /></div>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>密保问题2 *</label>
-              <select className="input mb-2" value={securityQuestion2} onChange={e => { setSecurityQuestion2(e.target.value); setCustomQuestion2('') }} disabled={loading}><option value="">选择或自定义问题</option>{fixedQuestions.map(q => <option key={q} value={q}>{q}</option>)}<option value="custom">自定义问题</option></select>
-              {(securityQuestion2 === 'custom' || !fixedQuestions.includes(securityQuestion2)) && <input type="text" className="input mb-2" placeholder="请输入自定义问题" value={customQuestion2} onChange={e => setCustomQuestion2(e.target.value)} disabled={loading} maxLength={100} />}
-              <input type="text" className="input" placeholder="请输入密保答案" value={securityAnswer2} onChange={e => setSecurityAnswer2(e.target.value)} disabled={loading} maxLength={100} /></div>
-            <button onClick={handleRegister} disabled={loading} className="btn-primary w-full disabled:opacity-50">{loading ? '注册中...' : '注册'}</button>
-            <button onClick={() => { if (!loading) { resetForm(); setStep('login') } }} disabled={loading} className="w-full text-center text-sm active:scale-95 transition-transform" style={{ color: '#999' }}>已有账号？去登录</button>
-          </div>)}
-
-          {step === 'forgot' && (<div className="space-y-4 animate-fade-in">
-            <p className="text-sm" style={{ color: '#666' }}>请输入注册时使用的手机号</p>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>手机号</label><input type="tel" className="input" placeholder="请输入11位手机号" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} disabled={loading} maxLength={11} /></div>
-            <button onClick={() => { if (phone && validatePhone(phone)) setStep('verify'); else setError('请输入正确的11位手机号') }} disabled={loading} className="btn-primary w-full disabled:opacity-50">下一步</button>
-            <button onClick={() => { if (!loading) { resetForm(); setStep('login') } }} disabled={loading} className="w-full text-center text-sm active:scale-95 transition-transform" style={{ color: '#999' }}>返回登录</button>
-          </div>)}
-
-          {step === 'verify' && (<div className="space-y-4 animate-fade-in">
-            <p className="text-sm" style={{ color: '#666' }}>请回答您的密保问题</p>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>密保答案</label><input type="text" className="input" placeholder="请输入密保答案" value={securityAnswer1} onChange={e => setSecurityAnswer1(e.target.value)} disabled={loading} maxLength={100} /></div>
-            <button onClick={handleVerifyAnswer} disabled={loading} className="btn-primary w-full disabled:opacity-50">{loading ? '验证中...' : '验证'}</button>
-            <button onClick={() => { if (!loading) { resetForm(); setStep('forgot') } }} disabled={loading} className="w-full text-center text-sm active:scale-95 transition-transform" style={{ color: '#999' }}>返回</button>
-          </div>)}
-
-          {step === 'reset' && (<div className="space-y-4 animate-fade-in">
-            <p className="text-sm" style={{ color: '#666' }}>请设置新密码</p>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>新密码</label><input type="password" className="input" placeholder="请输入新密码（至少6位）" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>确认新密码</label><input type="password" className="input" placeholder="请再次输入新密码" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
-            <button onClick={handleResetPassword} disabled={loading} className="btn-primary w-full disabled:opacity-50">{loading ? '重置中...' : '重置密码'}</button>
-          </div>)}
-
-          {step === 'appeal' && (<div className="space-y-4 animate-fade-in">
-            <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: 'rgba(246,193,44,0.08)', color: '#92400E' }}>
-              <p className="font-medium mb-1">手机号申诉须知</p>
-              <p>如果您发现自己的手机号被他人注册，请提交申诉。客服将电话联系您进行核实。</p>
-            </div>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>您申诉的手机号码 *</label><input type="tel" className="input" placeholder="请输入被占用的手机号" value={appealPhone} onChange={e => setAppealPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} disabled={loading} maxLength={11} /></div>
-            <div>
-              <label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>提供该手机号为本人的证据 *</label>
-              <textarea className="input min-h-[80px] resize-none" placeholder="例如：手机营业厅App号码截图、缴费记录等，请详细描述" value={appealEvidence} onChange={e => setAppealEvidence(e.target.value)} disabled={loading || appealUploading} maxLength={500} />
-              <div className="mt-2">
-                <div className="flex flex-wrap gap-2">
-                  {appealImages.map((img, i) => (
-                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-color)' }}>
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                      <button type="button" onClick={() => removeAppealImage(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>✕</button>
-                    </div>
-                  ))}
-                  {appealImages.length < 3 && (
-                    <label className="w-20 h-20 rounded-lg flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform" style={{ border: '2px dashed var(--border-color)', backgroundColor: 'var(--bg-page)' }}>
-                      <span className="text-2xl" style={{ color: '#ccc' }}>{appealUploading ? '⏳' : '+'}</span>
-                      <span className="text-xs" style={{ color: '#999' }}>{appealUploading ? '上传中' : '上传截图'}</span>
-                      <input ref={appealFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleAppealImageUpload} disabled={appealUploading || loading} />
-                    </label>
-                  )}
-                </div>
-                <p className="text-xs mt-1" style={{ color: '#999' }}>可上传手机营业厅截图等证据（最多3张，每张不超过5MB）</p>
+          {/* 登录 */}
+          {step === 'login' && (
+            <div className="space-y-4 animate-fade-in">
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>手机号</label><input type="tel" className="input" placeholder="请输入11位手机号" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} disabled={loading} maxLength={11} /></div>
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>密码</label><input type="password" className="input" placeholder="请输入密码" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
+              <button onClick={handleLogin} disabled={loading} className="btn-primary w-full disabled:opacity-50">{loading ? '登录中...' : '登录'}</button>
+              <div className="flex justify-between text-sm">
+                <button onClick={() => { if (!loading) { resetForm(); setStep('register') } }} disabled={loading} style={{ color: '#D4A517' }} className="font-medium active:scale-95 transition-transform">注册账号</button>
+                <button onClick={() => { if (!loading) { resetForm(); setStep('forgot') } }} disabled={loading} className="active:scale-95 transition-transform" style={{ color: '#999' }}>忘记密码？</button>
               </div>
+              <div className="text-center"><button onClick={() => { if (!loading) { resetForm(); setStep('appeal') } }} disabled={loading} className="text-xs active:scale-95 transition-transform" style={{ color: '#D4A517' }}>手机号被占用？进行申诉</button></div>
             </div>
-            <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>设置暗号 *</label><input type="text" className="input" placeholder="例如：好好学习" value={appealCodeWord} onChange={e => setAppealCodeWord(e.target.value)} disabled={loading} maxLength={50} />
-              <p className="text-xs mt-1" style={{ color: '#999' }}>后续客服拨打电话核实，您需说出此暗号确认身份</p></div>
-            <button onClick={handleAppeal} disabled={loading || appealUploading} className="btn-primary w-full disabled:opacity-50">{loading ? '提交中...' : '提交申诉'}</button>
-            <div className="text-center"><button onClick={() => { if (!loading) { resetForm(); setStep('login') } }} disabled={loading} className="text-sm active:scale-95 transition-transform" style={{ color: '#999' }}>返回登录</button></div>
-            <div className="p-3 rounded-lg text-xs" style={{ backgroundColor: 'var(--bg-page)', color: '#999' }}>由于网站经费有限，暂不支持手机号码短信验证码功能，后续版本将完善此功能。</div>
-          </div>)}
+          )}
+
+          {/* 注册 */}
+          {step === 'register' && (
+            <div className="space-y-4 animate-fade-in">
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>手机号 *</label><input type="tel" className="input" placeholder="请输入11位手机号" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} disabled={loading} maxLength={11} /></div>
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>设置密码 *</label><input type="password" className="input" placeholder="请输入密码（至少6位）" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>确认密码 *</label><input type="password" className="input" placeholder="请再次输入密码" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
+
+              <div>
+                <label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>密保问题1 *</label>
+                <select className="input mb-2" value={securityQuestion1} onChange={e => { setSecurityQuestion1(e.target.value); if (e.target.value !== 'custom') setCustomQuestion1('') }} disabled={loading}>
+                  <option value="">选择或自定义问题</option>
+                  {fixedQuestions.map(q => <option key={q} value={q}>{q}</option>)}
+                  <option value="custom">自定义问题</option>
+                </select>
+                {securityQuestion1 === 'custom' && <input type="text" className="input mb-2" placeholder="请输入自定义问题" value={customQuestion1} onChange={e => setCustomQuestion1(e.target.value)} disabled={loading} maxLength={100} />}
+                <input type="text" className="input" placeholder="请输入密保答案" value={securityAnswer1} onChange={e => setSecurityAnswer1(e.target.value)} disabled={loading} maxLength={100} />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>密保问题2 *</label>
+                <select className="input mb-2" value={securityQuestion2} onChange={e => { setSecurityQuestion2(e.target.value); if (e.target.value !== 'custom') setCustomQuestion2('') }} disabled={loading}>
+                  <option value="">选择或自定义问题</option>
+                  {fixedQuestions.map(q => <option key={q} value={q}>{q}</option>)}
+                  <option value="custom">自定义问题</option>
+                </select>
+                {securityQuestion2 === 'custom' && <input type="text" className="input mb-2" placeholder="请输入自定义问题" value={customQuestion2} onChange={e => setCustomQuestion2(e.target.value)} disabled={loading} maxLength={100} />}
+                <input type="text" className="input" placeholder="请输入密保答案" value={securityAnswer2} onChange={e => setSecurityAnswer2(e.target.value)} disabled={loading} maxLength={100} />
+              </div>
+
+              <button onClick={handleRegister} disabled={loading} className="btn-primary w-full disabled:opacity-50">{loading ? '注册中...' : '注册'}</button>
+              <button onClick={() => { if (!loading) { resetForm(); setStep('login') } }} disabled={loading} className="w-full text-center text-sm active:scale-95 transition-transform" style={{ color: '#999' }}>已有账号？去登录</button>
+            </div>
+          )}
+
+          {/* 忘记密码 - 输入手机号 */}
+          {step === 'forgot' && (
+            <div className="space-y-4 animate-fade-in">
+              <p className="text-sm" style={{ color: '#666' }}>请输入注册时使用的手机号</p>
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>手机号</label><input type="tel" className="input" placeholder="请输入11位手机号" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} disabled={loading} maxLength={11} /></div>
+              <button onClick={() => { if (phone && validatePhone(phone)) setStep('verify'); else setError('请输入正确的11位手机号') }} disabled={loading} className="btn-primary w-full disabled:opacity-50">下一步</button>
+              <button onClick={() => { if (!loading) { resetForm(); setStep('login') } }} disabled={loading} className="w-full text-center text-sm active:scale-95 transition-transform" style={{ color: '#999' }}>返回登录</button>
+            </div>
+          )}
+
+          {/* 验证密保 - 显示具体问题 */}
+          {step === 'verify' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(246,193,44,0.08)' }}>
+                <p className="text-sm font-medium mb-1" style={{ color: '#92400E' }}>请回答您的密保问题</p>
+                <p className="text-sm" style={{ color: '#666' }}>问题：你的学号是多少？</p>
+                <p className="text-xs mt-2" style={{ color: '#999' }}>提示：如果您设置了多个密保问题，请任选一个回答即可</p>
+              </div>
+              <div>
+                <label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>密保答案</label>
+                <input type="text" className="input" placeholder="请输入密保答案" value={verifyAnswer} onChange={e => setVerifyAnswer(e.target.value)} disabled={loading} maxLength={100} />
+              </div>
+              <button onClick={handleVerifyAnswer} disabled={loading} className="btn-primary w-full disabled:opacity-50">{loading ? '验证中...' : '验证'}</button>
+              <button onClick={() => { if (!loading) { resetForm(); setStep('forgot') } }} disabled={loading} className="w-full text-center text-sm active:scale-95 transition-transform" style={{ color: '#999' }}>返回</button>
+            </div>
+          )}
+
+          {/* 重置密码 */}
+          {step === 'reset' && (
+            <div className="space-y-4 animate-fade-in">
+              <p className="text-sm" style={{ color: '#666' }}>请设置新密码</p>
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>新密码</label><input type="password" className="input" placeholder="请输入新密码（至少6位）" value={password} onChange={e => setPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>确认新密码</label><input type="password" className="input" placeholder="请再次输入新密码" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} disabled={loading} maxLength={50} /></div>
+              <button onClick={handleResetPassword} disabled={loading} className="btn-primary w-full disabled:opacity-50">{loading ? '重置中...' : '重置密码'}</button>
+            </div>
+          )}
+
+          {/* 手机号申诉 */}
+          {step === 'appeal' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: 'rgba(246,193,44,0.08)', color: '#92400E' }}>
+                <p className="font-medium mb-1">手机号申诉须知</p>
+                <p>如果您发现自己的手机号被他人注册，请提交申诉。客服将电话联系您进行核实。</p>
+              </div>
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>您申诉的手机号码 *</label><input type="tel" className="input" placeholder="请输入被占用的手机号" value={appealPhone} onChange={e => setAppealPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} disabled={loading} maxLength={11} /></div>
+              <div>
+                <label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>提供该手机号为本人的证据 *</label>
+                <textarea className="input min-h-[80px] resize-none" placeholder="例如：手机营业厅App号码截图、缴费记录等，请详细描述" value={appealEvidence} onChange={e => setAppealEvidence(e.target.value)} disabled={loading || appealUploading} maxLength={500} />
+                <div className="mt-2">
+                  <div className="flex flex-wrap gap-2">
+                    {appealImages.map((img, i) => (
+                      <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden" style={{ border: '1px solid #E5E7EB' }}>
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => removeAppealImage(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>✕</button>
+                      </div>
+                    ))}
+                    {appealImages.length < 3 && (
+                      <label className="w-20 h-20 rounded-lg flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform" style={{ border: '2px dashed #D1D5DB', backgroundColor: '#F9FAFB' }}>
+                        <span className="text-2xl" style={{ color: '#ccc' }}>{appealUploading ? '⏳' : '+'}</span>
+                        <span className="text-xs" style={{ color: '#999' }}>{appealUploading ? '上传中' : '上传截图'}</span>
+                        <input ref={appealFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleAppealImageUpload} disabled={appealUploading || loading} />
+                      </label>
+                    )}
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: '#999' }}>可上传手机营业厅截图等证据（最多3张，每张不超过5MB）</p>
+                </div>
+              </div>
+              <div><label className="block text-sm mb-2 font-medium" style={{ color: '#666' }}>设置暗号 *</label><input type="text" className="input" placeholder="例如：好好学习" value={appealCodeWord} onChange={e => setAppealCodeWord(e.target.value)} disabled={loading} maxLength={50} />
+                <p className="text-xs mt-1" style={{ color: '#999' }}>后续客服拨打电话核实，您需说出此暗号确认身份</p></div>
+              <button onClick={handleAppeal} disabled={loading || appealUploading} className="btn-primary w-full disabled:opacity-50">{loading ? '提交中...' : '提交申诉'}</button>
+              <div className="text-center"><button onClick={() => { if (!loading) { resetForm(); setStep('login') } }} disabled={loading} className="text-sm active:scale-95 transition-transform" style={{ color: '#999' }}>返回登录</button></div>
+            </div>
+          )}
         </div>
       </div>
     </div>
